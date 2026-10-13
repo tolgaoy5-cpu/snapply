@@ -1,0 +1,216 @@
+// Application questions on the current page, for "ask once, remember, fill next time".
+// Loaded after content.js (uses its textFor/visible/canonical/semanticElements helpers).
+// Reads questions, reads dropdown options, and fills one answer at a time. Never submits.
+(function(){
+  const Q=window.JobCopilotQuestions;
+  const clean=s=>String(s??'').replace(/\s+/g,' ').trim();
+  const norm=s=>clean(s).toLowerCase();
+  const sleep=t=>new Promise(r=>setTimeout(r,t));
+  const isWorkday=()=>!!window.JobCopilotWorkday?.isWorkday?.();
+  const EMPTY=/^(?:(?:please\s+)?(?:select|choose)(?:\s+one)?(?:\s*(?:\.{3}|…))?|-+|none selected)$/i;
+  const stripStar=s=>clean(s).replace(/\s*\(required\)\s*$/i,'').replace(/\s*\*\s*$/,'');
+
+  // Profile-driven fields are filled elsewhere; these are not "questions".
+  const PROFILE_KEYS=new Set(['first_name','last_name','email','phone','phone_country_code','phone_extension','phone_device_type','country','postcode','city','address','address_line2','address_line3','title','resume','employer','job_title','start_date','end_date','education','qualification','application_source']);
+
+  function legendFor(el){return clean(el.closest('fieldset')?.querySelector('legend')?.innerText||'')}
+  // Group caption: <legend>, or an ARIA group's aria-labelledby / aria-label (TRAC radio groups).
+  function groupLabel(el){
+    const legend=legendFor(el);if(legend)return legend;
+    const g=el.closest('[role="group"],[role="radiogroup"]');if(!g)return '';
+    const ids=(g.getAttribute('aria-labelledby')||'').split(/\s+/).filter(Boolean);
+    const byIds=ids.map(id=>document.getElementById(id)?.innerText||'').join(' ');
+    return clean(byIds||g.getAttribute('aria-label')||'');
+  }
+  // Field labels like "Day", "Month", "Other. Please specify..." need their group's caption.
+  const GENERIC=/^(day|month|year|other\.?(\s*please specify\.*)?|please provide details below|please specify\.*|details)$/i;
+  const STEM={dob:'Date of birth',dateofbirth:'Date of birth',startdate:'Start date',enddate:'End date',nhsstart:'NHS start date',registrationexpiry:'Registration expiry'};
+  function withCaption(el,label){
+    if(!GENERIC.test(stripStar(label)))return label;
+    const box=el.closest('.form-widget-container,[data-automation-id^="formField"],fieldset');
+    const cap=clean(box?.querySelector('[id$="_caption"],.order-1,legend')?.innerText||'');
+    if(cap&&cap!==label)return `${stripStar(cap)} › ${label}`;
+    const stem=(el.id||'').toLowerCase().match(/([a-z]+)(?:-\d+)?\.(day|month|year|select|text)$/)?.[1]||'';
+    const key=Object.keys(STEM).find(k=>stem.endsWith(k));
+    return key?`${STEM[key]} › ${label}`:label;
+  }
+  // Whole sections that hold personal/monitoring data, whatever each question says.
+  const PERSONAL_SECTION=/equalop|equality|diversity|demograph|selfident|self-ident|disabilit|personal-dob|dateofbirth|ethnic|religion|orientation|marital|gender|veteran/i;
+  // A sentence asking something is a question, even if it mentions "college", "employer" or a city.
+  const isQuestionSentence=l=>/\?\s*\*?\s*$/.test(clean(l))||/^(are|do|does|did|have|has|is|was|were|will|would|can|could|please|what|which|how|when|where|why|if)\b/i.test(clean(l));
+  const isRequiredText=l=>/\*|\(required\)/i.test(l);
+
+  // Each entry: {qid, el, label, kind:'text'|'choice', control:'workday_listbox'|'select'|'radio'|'text', required}
+  function controls(){
+    const out=[];const seen=new Set();
+    const add=x=>{if(x.label&&x.el)x.label=withCaption(x.el,x.label);if(!x.label||seen.has(x.qid)||Q.sensitivity(x.label)==='never')return;seen.add(x.qid);out.push(x)};
+    if(isWorkday()){
+      // Questionnaire pages plus Workday's personal-data pages (Voluntary Disclosures, self-identification).
+      const WD_IDS=/Questionnaire|personalInfo|selfIdentif|disabilit|veteran/i;
+      const wdLabel=el=>legendFor(el)||clean(el.closest('[data-automation-id^="formField"]')?.querySelector('label')?.innerText||'')||textFor(el);
+      const wdRequired=(el,label)=>el.getAttribute('aria-required')==='true'||/required/i.test(el.getAttribute('aria-label')||'')||/\*\s*$/.test(label);
+      const dates=new Set();
+      for(const el of document.querySelectorAll('button[aria-haspopup="listbox"][id],textarea[id],input[id]')){
+        if(!WD_IDS.test(el.id)||!visible(el))continue;
+        const label=wdLabel(el);
+        if(/-dateSection(Month|Day|Year)-input$/.test(el.id)){
+          const base=el.id.replace(/-dateSection(Month|Day|Year)-input$/,'');
+          if(dates.has(base))continue;dates.add(base);
+          add({qid:base,el,label:stripStar(label),kind:'text',control:'workday_date',required:wdRequired(el,label)});
+        }else if(el.matches('button[aria-haspopup="listbox"]'))
+          add({qid:el.id,el,label:stripStar(label),kind:'choice',control:'workday_listbox',required:wdRequired(el,label)});
+        else if(el.getAttribute('data-uxi-widget-type')==='selectinput')
+          add({qid:el.id,el,label:stripStar(label),kind:'choice',control:'workday_multiselect',required:wdRequired(el,label)});
+        else if(el.matches('textarea,input[type="text"],input:not([type])'))
+          add({qid:el.id,el,label:stripStar(label),kind:'text',control:'text',required:wdRequired(el,label)});
+      }
+    }else{
+      for(const el of semanticElements()){
+        if(el.type==='hidden'||el.type==='file'||el.type==='checkbox'||el.type==='password')continue;
+        // Rows of repeated history tables (TRAC education/employment) are filled by their own adapters.
+        if(/\.(gmrow|grrow)_\d+\./.test(el.id||''))continue;
+        // Prefer the field's own <label>; textFor() also appends aria-label/placeholder copies.
+        const label=clean(el.id&&document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.innerText||'')||textFor(el);
+        if(PROFILE_KEYS.has(canonical(label,el))&&!isQuestionSentence(label))continue;
+        // React-select (Greenhouse and others): a text input inside .select__control is a list, not text.
+        if(el.matches('input.select__input')&&el.closest('.select__control')&&el.id){
+          const own=clean(document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.innerText||'')||label;
+          if((PROFILE_KEYS.has(canonical(own,el))&&!isQuestionSentence(own))||/^(country|candidate-location)$/.test(el.id))continue;
+          add({qid:el.id,el,label:stripStar(own),kind:'choice',control:'react_select',required:el.getAttribute('aria-required')==='true'||/\*/.test(own)});
+          continue;
+        }
+        if(el.tagName==='SELECT')add({qid:el.id||el.name,el,label:stripStar(label),kind:'choice',control:'select',required:el.required||el.getAttribute('aria-required')==='true'||isRequiredText(label)});
+        else if(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&/^(text|)$/.test(el.type)&&el.id))
+          add({qid:el.id||el.name,el,label:stripStar(label),kind:'text',control:'text',required:el.required||el.getAttribute('aria-required')==='true'||/\*/.test(label)});
+      }
+    }
+    // A lone required checkbox ("I consent…", "I confirm…") is a yes/no question the user answers.
+    for(const cb of document.querySelectorAll('input[type="checkbox"]')){
+      if(!visible(cb)||!(cb.required||cb.getAttribute('aria-required')==='true'))continue;
+      if(cb.name&&document.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(cb.name)}"]`).length>1)continue;
+      const label=clean(document.querySelector(`label[for="${CSS.escape(cb.id||'')}"]`)?.innerText||'')||textFor(cb);
+      add({qid:cb.id||'checkbox:'+cb.name,el:cb,label:stripStar(label),kind:'choice',control:'checkbox',required:true});
+    }
+    // Radio groups (Workday and generic), grouped by name, labelled by their fieldset legend.
+    const groups={};
+    for(const r of document.querySelectorAll('input[type="radio"]')){if(visible(r)&&r.name)(groups[r.name]=groups[r.name]||[]).push(r)}
+    for(const [name,radios] of Object.entries(groups)){
+      const label=groupLabel(radios[0]);if(!label)continue;
+      if(!isWorkday()&&PROFILE_KEYS.has(canonical(label,radios[0]))&&!isQuestionSentence(label))continue;
+      add({qid:'radio:'+name,el:radios[0],radios,label:stripStar(label),kind:'choice',control:'radio',required:isRequiredText(label)||radios.some(r=>r.required||r.getAttribute('aria-required')==='true')});
+    }
+    return out;
+  }
+  function radioLabel(r){return clean(document.querySelector(`label[for="${CSS.escape(r.id||'')}"]`)?.innerText||r.closest('label')?.innerText||r.value)}
+  // Controls Job Copilot can read and remember but does not fill yet.
+  const READ_ONLY=new Set(['workday_date','workday_multiselect']);
+  function currentValue(c){
+    if(c.control==='workday_listbox'){const t=clean(c.el.innerText);return EMPTY.test(t)?'':t}
+    if(c.control==='checkbox')return c.el.checked?'Yes':'';
+    if(c.control==='react_select'){
+      const box=c.el.closest('.select__control');
+      const v=[...(box?.querySelectorAll('.select__single-value,.select__multi-value__label')||[])].map(n=>clean(n.innerText)).filter(Boolean);
+      return v.join(', ');
+    }
+    if(c.control==='workday_multiselect')return (window.JobCopilotWorkday?.multiselectSelection?.(c.el)||[]).join(', ');
+    if(c.control==='workday_date'){
+      const part=k=>String(document.getElementById(`${c.qid}-dateSection${k}-input`)?.value||'').trim();
+      const v=['Day','Month','Year'].map(part).filter(Boolean);
+      return v.length&&v.length===['Day','Month','Year'].filter(k=>document.getElementById(`${c.qid}-dateSection${k}-input`)).length?v.join('/'):'';
+    }
+    if(c.control==='select'){const o=c.el.selectedOptions?.[0];return o&&o.value!==''&&!EMPTY.test(clean(o.text))?clean(o.text):''}
+    if(c.control==='radio'){const r=c.radios.find(x=>x.checked);return r?radioLabel(r):''}
+    return String(c.el.value||'').trim();
+  }
+  function find(qid){return controls().find(c=>c.qid===qid)}
+
+  const RANK={normal:0,review:1,sensitive:2,legal:3,never:4};
+  // Repeated labels (three "Email:" fields for three referees) are told apart by the nearest
+  // preceding label that is unique on the page, so one saved answer never fills all of them.
+  // On a page about referees, contact fields hold other people's data: confirm every time.
+  function withContext(list){
+    const count={};list.forEach(c=>{const k=Q.signature(c.label);count[k]=(count[k]||0)+1});
+    const aboutReferees=/referee|\breferences?\b/i.test(document.querySelector('main')?.innerText||document.body.innerText||'');
+    let anchor='';
+    return list.map(c=>{
+      const dup=count[Q.signature(c.label)]>1;
+      if(!dup){anchor=c.label;}
+      const label=dup&&anchor?`${anchor} › ${c.label}`:c.label;
+      let sensitivity=Q.sensitivity(label);
+      if(aboutReferees&&Q.isContact(c.label)&&RANK[sensitivity]<RANK.sensitive)sensitivity='sensitive';
+      // Workday personal-data sections are personal by definition, whatever the wording.
+      if((/personalInfo|selfIdentif/i.test(c.el?.id||c.qid)||PERSONAL_SECTION.test(c.el?.id||c.qid||''))&&RANK[sensitivity]<RANK.sensitive)sensitivity='sensitive';
+      return {...c,label,sensitivity};
+    });
+  }
+
+  function questions(){
+    return withContext(controls()).map(c=>({qid:c.qid,label:c.label,kind:c.kind,control:c.control,required:c.required,
+      value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
+      options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
+        :c.control==='radio'?c.radios.map(radioLabel):null}));
+  }
+
+  // Workday dropdown options only exist while the list is open: open, read, close. No option is clicked.
+  async function options(qid){
+    const c=find(qid);if(!c)return {ok:false,reason:'Question not found on this page.'};
+    if(c.control!=='workday_listbox')return {ok:true,options:questions().find(q=>q.qid===qid)?.options||[]};
+    const before=currentValue(c);
+    try{c.el.scrollIntoView({block:'center'});c.el.click()}catch(_){return {ok:false,reason:'Could not open the list.'}}
+    let opts=[];
+    for(let i=0;i<10&&!opts.length;i++){
+      await sleep(80);
+      opts=[...document.querySelectorAll('[role="option"]')].filter(visible).map(o=>clean(o.innerText)).filter(t=>t&&!EMPTY.test(t));
+    }
+    const esc=new KeyboardEvent('keydown',{key:'Escape',code:'Escape',keyCode:27,bubbles:true});
+    (document.activeElement||c.el).dispatchEvent(esc);c.el.dispatchEvent(esc);
+    await sleep(200);
+    const after=currentValue(find(qid)||c);
+    return {ok:after===before,options:[...new Set(opts)],reason:after===before?undefined:'The answer changed while reading options.'};
+  }
+
+  function setText(el,value){
+    const proto=el instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
+    const set=Object.getOwnPropertyDescriptor(proto,'value').set;
+    // The page may not have focus while the popup is open; dispatch focus events explicitly.
+    el.focus();el.dispatchEvent(new FocusEvent('focus'));el.dispatchEvent(new FocusEvent('focusin',{bubbles:true}));
+    set.call(el,'');el.dispatchEvent(new Event('input',{bubbles:true}));
+    set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));
+    el.blur();el.dispatchEvent(new FocusEvent('blur'));el.dispatchEvent(new FocusEvent('focusout',{bubbles:true}));
+  }
+
+  async function fill(qid,value){
+    const c=find(qid);if(!c)return {ok:false,reason:'Question not found on this page.'};
+    const wanted=clean(value);if(!wanted)return {ok:false,reason:'Answer is empty.'};
+    if(Q.sensitivity(c.label)==='never')return {ok:false,reason:'This question is never filled automatically.'};
+    if(READ_ONLY.has(c.control))return {ok:false,reason:'Answer this one on the page for now; Job Copilot can remember it afterwards.'};
+    try{
+      if(c.control==='workday_listbox'){
+        const r=await window.JobCopilotWorkday.chooseExact(c.el,wanted);
+        if(!r?.ok)return {ok:false,reason:r?.reason||'Option could not be selected.'};
+      }else if(c.control==='select'){
+        const o=[...c.el.options].find(o=>norm(o.text)===norm(wanted)||norm(o.value)===norm(wanted));
+        if(!o)return {ok:false,reason:'That option is not offered here.'};
+        c.el.value=o.value;c.el.dispatchEvent(new Event('input',{bubbles:true}));c.el.dispatchEvent(new Event('change',{bubbles:true}));
+      }else if(c.control==='checkbox'){
+        if(norm(wanted)!=='yes')return {ok:false,reason:'Leave this box unticked on the page if you do not agree.'};
+        if(!c.el.checked)c.el.click();
+      }else if(c.control==='radio'){
+        const r=c.radios.find(x=>norm(radioLabel(x))===norm(wanted));
+        if(!r)return {ok:false,reason:'That option is not offered here.'};
+        r.click();
+      }else setText(c.el,wanted);
+    }catch(e){return {ok:false,reason:String(e?.message||e).slice(0,120)}}
+    await sleep(120);
+    const now=currentValue(find(qid)||c);
+    const ok=c.kind==='choice'?norm(now)===norm(wanted):now===wanted;
+    return ok?{ok:true,value:now}:{ok:false,reason:'The page did not keep the answer.',value:now};
+  }
+
+  chrome.runtime.onMessage.addListener((m,_s,send)=>{
+    if(m.type==='PAGE_QUESTIONS'){send({ok:true,questions:questions()});return}
+    if(m.type==='QUESTION_OPTIONS'){options(m.qid).then(send).catch(e=>send({ok:false,reason:e.message}));return true}
+    if(m.type==='FILL_QUESTION'){fill(m.qid,m.value).then(send).catch(e=>send({ok:false,reason:e.message}));return true}
+  });
+  window.JobCopilotPageQuestions={questions,options,fill};
+})();

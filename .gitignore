@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Secrets / local config
+.env
+.env.*
+*.key
+
+# Personal data and backups must never be committed
+*.bin
+*backup*/
+work/
+
+# Local development notes and assistant context (contain local paths); never published
+private-notes/
+CLAUDE.md

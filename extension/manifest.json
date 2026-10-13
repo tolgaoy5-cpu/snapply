@@ -1,0 +1,84 @@
+{
+  "manifest_version": 3,
+  "name": "Job Copilot",
+  "version": "0.26.68",
+  "description": "Fills job applications from your CV, remembers your answers and drafts grounded AI answers — you review and submit.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "unlimitedStorage"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Job Copilot"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "main_world_bridge.js",
+        "react_select_main.js",
+        "workday_date_repair.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "adapter_registry.js",
+        "workday_adapter.js",
+        "workday_experience.js",
+        "workday_languages.js",
+        "greenhouse_adapter.js",
+        "generic_adapter.js",
+        "ciphr_adapter.js",
+        "trac_adapter.js",
+        "job_extractor.js",
+        "date_controls.js",
+        "ats_repeated_strategies.js",
+        "repeated_blocks.js",
+        "live_fixture_capture.js",
+        "option_resolver.js",
+        "inpage_debug.js",
+        "question_memory.js",
+        "content.js",
+        "page_questions.js",
+        "inpage_panel.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "popup.html",
+        "icons/icon256.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "identity": ["first_name","last_name","email","phone","address","city","postcode"],
+  "eligibility": ["right_to_work","sponsorship"],
+  "preferences": ["notice_period","salary_expectation"],
+  "experience": ["employer","job_title","start_date","end_date"],
+  "education": ["education","qualification"],
+  "generated_evidence_locked": ["supporting_statement"]
+}

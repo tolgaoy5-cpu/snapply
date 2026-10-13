@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Job Copilot</title><style>
+:root{--b1:#ff7a3d;--b2:#ff2d87;--b3:#7c3aed;--brand:linear-gradient(120deg,var(--b1),var(--b2) 50%,var(--b3));
+  --ink:#0f172a;--ink2:#334155;--muted:#64748b;--line:#e9edf3;--bg:#f6f7fb;--surface:#fff;--soft:#faf5ff;--soft-line:#ede4fd;
+  --ok:#15803d;--warn:#b45309;--bad:#b91c1c;--focus:#a78bfa}
+*{box-sizing:border-box}
+body{font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;width:500px;margin:0;padding:16px;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+header{margin-bottom:12px}
+h1{font-size:20px;line-height:1.2;margin:0 0 2px;letter-spacing:-.02em}
+.version{font-size:11px;color:var(--muted)}
+main{counter-reset:step}
+h2{display:flex;align-items:center;gap:10px;font-size:15px;letter-spacing:-.01em;margin:0 0 12px}
+main>section>h2::before{counter-increment:step;content:counter(step);display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:8px;
+  background:var(--brand);color:#fff;font-size:12px;font-weight:800;box-shadow:0 3px 8px rgba(255,45,135,.28)}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:16px 0 6px}
+p{margin:0 0 10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin:10px 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card .card{border:0;padding:0;margin:0;box-shadow:none}
+button{font:inherit;font-weight:600;cursor:pointer;background:var(--surface);color:var(--ink);border:1px solid #dfe4ec;border-radius:10px;padding:8px 12px;margin:4px 4px 4px 0;transition:background .15s,border-color .15s,box-shadow .15s}
+button:hover{background:#f8fafc;border-color:#cbd3df}
+button:disabled{cursor:default;opacity:.45}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.primary-action button{width:100%;background:var(--brand);border:0;color:#fff;font-size:15px;font-weight:700;padding:13px;margin:4px 0 8px;border-radius:12px;
+  box-shadow:0 8px 20px rgba(255,45,135,.3),inset 0 1px 0 rgba(255,255,255,.25);letter-spacing:.01em}
+.primary-action button:hover{background:var(--brand);filter:brightness(1.05);box-shadow:0 10px 24px rgba(255,45,135,.38),inset 0 1px 0 rgba(255,255,255,.25)}
+.primary-action button:active{filter:brightness(.97)}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.row button{margin:0}
+.muted{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+#summary{background:var(--soft);border:1px solid var(--soft-line);color:#4c1d95;border-radius:12px;padding:10px 12px;margin-top:10px;font-weight:500}
+#requiredState,#queueActionStatus{margin:8px 0}
+#profileState{color:var(--ink);font-weight:600;font-size:13px}
+details{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px;color:var(--ink2)}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin:0 2px}
+details[open]>summary::before{transform:rotate(45deg)}
+.detail-body{padding-top:10px}
+textarea,input,select{font:inherit;max-width:100%;border:1px solid #dfe4ec;border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink)}
+textarea{width:100%;min-height:100px;resize:vertical;margin:7px 0}
+input[type=file]{display:block;width:100%;margin:7px 0}
+input[type=checkbox]{accent-color:var(--b3)}
+label{display:block;font-size:12px;margin-top:4px;color:var(--ink2)}
+.pill{display:inline-block;padding:3px 8px;border-radius:99px;background:#f1f5f9}
+.high{color:var(--ok)}.ask{color:var(--warn)}.block{color:var(--bad)}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;background:#f1f5f9;border-radius:10px;padding:10px;font-size:11px}
+#cards .card{border:1px solid var(--line);border-left:3px solid var(--b2);padding:10px 12px;margin:8px 0;border-radius:12px}
+.ask-card{background:#fff;border:1px solid var(--soft-line);border-radius:14px;padding:12px;margin:8px 0;box-shadow:0 1px 2px rgba(124,58,237,.06)}
+.ask-card>div:first-child{font-weight:600;margin-bottom:4px}
+.ask-card textarea{min-height:60px}
+.ask-card select{width:100%;margin:6px 0}
+.ask-card button{background:var(--brand);color:#fff;border:0;box-shadow:0 4px 12px rgba(255,45,135,.25)}
+.ask-card button:hover{filter:brightness(1.05);background:var(--brand)}
+#askTitle{color:var(--b3)}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;margin:2px 0 6px}
+.saved-row{display:flex;gap:8px;align-items:flex-start;border-top:1px solid var(--line);padding:8px 0}
+.saved-row div{flex:1;overflow-wrap:anywhere}
+.done{color:var(--ok);font-weight:600}
+.queueHead{display:flex;justify-content:space-between;gap:8px}
+#advanced{padding:12px 4px;border-top:0}
+#advanced>summary{color:var(--muted)}
+#advanced button{font-size:12px}
+</style></head><body><header><h1>Job Copilot</h1><div class="version">V0.26.68 · You review and submit</div><div id="summary" role="status" aria-live="polite">Open an application page to get started.</div></header><main><section class="card"><h2>My Profile</h2><div class="muted" id="profileState"></div><div class="muted" id="savedCVState">No persistent CV saved yet.</div><details><summary>Import or replace CV</summary><div class="detail-body"><label for="cvFile">CV file</label><input accept=".pdf,.docx,.txt,.md" id="cvFile" type="file"/><button id="importCV">Import + Save</button></div></details><details><summary>Review profile details</summary><div class="detail-body"><div class="muted" id="unresolvedState">No unresolved CV items.</div><div id="unresolvedEditor" style="display:none"><div class="muted" id="unresolvedReason"></div><input id="unresolvedValue" placeholder="Confirmed corrected value" style="width:75%"/><button id="resolveUnresolved">Confirm</button><button id="nextUnresolved">Next</button></div></div></details><details><summary>Saved answers</summary><div class="detail-body"><div class="muted" id="savedAnswersState">No saved question answers yet.</div><div id="savedAnswersList"></div><div class="card"><div><select id="memoryKey"><option value="notice_period">Notice period</option><option value="salary_expectation">Salary expectation</option><option value="willing_to_relocate">Relocation</option><option value="preferred_work_arrangement">Work arrangement</option><option value="driving_licence">Driving licence</option><option value="right_to_work">Right to work</option><option value="sponsorship">Sponsorship</option><option value="country">Country</option><option value="postcode">Postcode</option><option value="title">Title / honorific</option><option value="recent_nhs_experience">Recent NHS experience</option><option value="address">Address line 1</option><option value="address_line2">Address line 2</option><option value="address_line3">Address line 3</option><option value="phone_device_type">Phone device type</option><option value="application_source">How did you hear about us?</option><option value="phone_country_code">Phone country code</option><option value="phone_extension">Phone extension</option></select> <input id="memoryValue" placeholder="Confirmed answer"/><button id="saveMemory">Save</button><button id="fillConfirmedOptions">Fill Confirmed Options</button></div><div class="muted" id="memoryStatus">No saved answer shown yet.</div></div></div></details></section><section class="card"><h2>Fill Application</h2><p class="muted">Fill supported fields using your profile and confirmed answers. Review the results before continuing on the website.</p><div class="primary-action"><button id="fillAllSafe">Fill this page</button></div><div class="row"><button id="attachSavedCV">Attach saved CV</button><button id="analyzeJob">Read job description</button></div></section><section class="card"><h2>Review</h2><div class="muted" id="requiredState">No required-field check yet.</div><div class="row"><button id="requiredCheck">Check this page</button><button id="guideMissing">Show next missing field</button></div><div id="cards"></div><h3 id="askTitle" style="display:none">Your input is needed</h3><div class="muted" id="askState"></div><div id="askList"></div><div class="row"><button id="rememberPage">Remember answers on this page</button></div><details><summary>Answers and questions</summary><div class="detail-body"><div class="card">
+<details><summary>Add a question manually</summary><label for="manualQuestion">Paste the application question here</label><textarea id="manualQuestion" maxlength="10000" placeholder="A question that could not be filled or detected"></textarea><button id="addManualQuestion">Add question</button><div class="muted">Write your answer below, then copy it into the application yourself.</div></details><div><button id="buildQueue">Generate All Answers</button><button id="prevQ">←</button><button id="nextQ">→</button><span class="pill" id="queuePos">0/0</span></div><div class="muted" id="queueQuestion"></div><textarea id="queueAnswer" placeholder="Reviewed answer"></textarea><div><button id="saveQueueEdit">Save + Revalidate</button><button id="insertQueue">Insert This Answer</button><button id="copyQueueAnswer">Copy</button></div><div aria-live="polite" class="muted" id="queueActionStatus" role="status"></div><div class="muted" id="queueEvidence"></div></div></div></details><details><summary>Cover letter</summary><div class="detail-body"><div class="card"><div><button id="generateCoverLetter">Generate from current job</button><button id="attachCoverLetter">Validate + Attach</button></div><textarea id="coverLetterBody" placeholder="Write your own letter here, or press Generate from current job — then review it before attaching"></textarea><div class="muted" id="coverLetterState">Requires a configured AI model and verified CV evidence. Never submits.</div></div></div></details><div id="answerReview"></div></section></main><details id="advanced"><summary>Advanced</summary><h3>Field tools</h3><div class="row"><button id="scan">Scan</button><button id="review">Review Plan</button><button id="extractJob">Extract Job</button><button id="questions">Evidence Questions</button><button id="fill">Safe Fill</button><button id="repeatPlan">Plan Repeated</button><button id="repeatFill">Safe Fill Repeated</button><button id="workdayBulkFill">Workday Bulk Experience Fill</button><button id="workdayRepairDates">Repair Workday Dates</button><button id="workdayLanguagePlan">Workday Language Plan</button><button id="workdayLanguageFill">Workday Language Fill</button><button id="tracEducationPlan">TRAC Education Plan</button><button id="tracEducationFill">TRAC Education Fill</button><button id="tracEmployerPlan">TRAC Employer Plan</button><button id="tracEmployerFill">TRAC Employer Fill</button></div><h3>Diagnostics and session</h3><div class="card"><div><button id="readiness">Run Readiness Check</button><button id="startSession">Start Session</button><button id="showAudit">Show Audit</button><button id="clearAudit">Clear</button><button id="captureFixture">Capture Live Fixture</button><button id="saveConfirmedFormValues">Save Confirmed Form Values</button></div><div class="muted" id="sessionState">No active application session.</div><label><input type="checkbox" id="debugOverlayToggle"> Show ATS debug overlay on pages (reload the page to apply)</label></div><h3>Saved CV management</h3><button id="forgetSavedCV">Forget Saved CV</button><h3>Technical output</h3><pre id="out"></pre></details><script src="question_memory.js"></script><script src="memory.js"></script><script src="saved_cv.js"></script><script src="session_audit.js"></script><script src="api_client.js"></script><script src="answer_review.js"></script><script src="queue.js"></script><script src="popup.js"></script></body></html>
