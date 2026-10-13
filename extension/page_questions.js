@@ -102,7 +102,7 @@
     return out;
   }
   function radioLabel(r){return clean(document.querySelector(`label[for="${CSS.escape(r.id||'')}"]`)?.innerText||r.closest('label')?.innerText||r.value)}
-  // Controls Job Copilot can read and remember but does not fill yet.
+  // Controls Snapply can read and remember but does not fill yet.
   const READ_ONLY=new Set(['workday_date','workday_multiselect']);
   function currentValue(c){
     if(c.control==='workday_listbox'){const t=clean(c.el.innerText);return EMPTY.test(t)?'':t}
@@ -183,7 +183,7 @@
     const c=find(qid);if(!c)return {ok:false,reason:'Question not found on this page.'};
     const wanted=clean(value);if(!wanted)return {ok:false,reason:'Answer is empty.'};
     if(Q.sensitivity(c.label)==='never')return {ok:false,reason:'This question is never filled automatically.'};
-    if(READ_ONLY.has(c.control))return {ok:false,reason:'Answer this one on the page for now; Job Copilot can remember it afterwards.'};
+    if(READ_ONLY.has(c.control))return {ok:false,reason:'Answer this one on the page for now; Snapply can remember it afterwards.'};
     try{
       if(c.control==='workday_listbox'){
         const r=await window.JobCopilotWorkday.chooseExact(c.el,wanted);

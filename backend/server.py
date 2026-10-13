@@ -18,7 +18,7 @@ from state_store import load_state, set_master_profile, set_memory_item, replace
 from cover_letter import generate as generate_cover_letter, render as render_cover_letter
 from origin_policy import EXTENSION_ORIGIN, origin_allowed
 
-app=FastAPI(title='Job Copilot Core API',version='0.26.31')
+app=FastAPI(title='Snapply Core API',version='0.26.31')
 app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=EXTENSION_ORIGIN,
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type'])
 

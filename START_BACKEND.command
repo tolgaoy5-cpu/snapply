@@ -5,7 +5,7 @@ cd "$HERE/backend"
 python3 - <<'PY'
 import sys
 if sys.version_info < (3, 10):
-    raise SystemExit('Job Copilot requires Python 3.10 or newer.')
+    raise SystemExit('Snapply requires Python 3.10 or newer.')
 PY
 if [ ! -d .venv ]; then python3 -m venv .venv; fi
 source .venv/bin/activate

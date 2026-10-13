@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Job Copilot",
-  "version": "0.26.68",
+  "name": "Snapply",
+  "version": "0.26.69",
   "description": "Fills job applications from your CV, remembers your answers and drafts grounded AI answers — you review and submit.",
   "permissions": [
     "activeTab",
@@ -17,7 +17,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Job Copilot"
+    "default_title": "Snapply"
   },
   "content_scripts": [
     {

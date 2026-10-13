@@ -1,6 +1,6 @@
-# Lunoviq Job Copilot
+# Snapply
 
-A Chrome extension that fills job applications from your CV, remembers your answers, and drafts
+*Snap. Apply. Done.* — a Chrome extension that fills job applications from your CV, remembers your answers, and drafts
 written answers and cover letters with AI — **without inventing anything and without ever
 submitting for you.**
 

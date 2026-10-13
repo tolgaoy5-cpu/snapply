@@ -10,10 +10,10 @@ async function send(type,payload={}){const t=await active();return chrome.tabs.s
 function show(d){byId('out').textContent=JSON.stringify(d,null,2);if(d?.error)byId('summary').textContent=`Your input is needed · ${d.error}`} 
 // Plain-language cards for required fields that are not handled as questions above.
 const CARD_TEXT={
-  AUTO_READY:['Fill this on the page','Job Copilot could not fill this field here. Please complete it on the page.'],
-  HIGH:['Fill this on the page','Job Copilot could not fill this field here. Please complete it on the page.'],
+  AUTO_READY:['Fill this on the page','Snapply could not fill this field here. Please complete it on the page.'],
+  HIGH:['Fill this on the page','Snapply could not fill this field here. Please complete it on the page.'],
   OPTION_READY:['Saved answer available','Press Fill this page to use your saved answer.'],
-  SENSITIVE_REVIEW:['Personal data · your choice','Job Copilot never fills personal data. Answer it on the page if you want to.'],
+  SENSITIVE_REVIEW:['Personal data · your choice','Snapply never fills personal data. Answer it on the page if you want to.'],
   REVIEW:['Please check','Review this field on the page.'],
   FILE_REQUIRED:['Upload on the page','Use the site\'s upload button, or Attach saved CV.'],
   USER_REQUIRED:['Your answer is needed','Answer this on the page.'],
@@ -140,13 +140,13 @@ async function renderReferees(note=''){
     const merged=[...saved];
     for(const ref of r.referees){const k=x=>`${x.fields['first-name']||''} ${x.fields.surname||''}`.trim().toLowerCase();const i=merged.findIndex(x=>k(x)===k(ref));if(i>=0)merged[i]={...ref,confirmed_at:new Date().toISOString()};else merged.push({...ref,confirmed_at:new Date().toISOString()})}
     saved=await window.JobCopilotMemory.saveReferees(merged);
-    status.className='done';status.textContent=`${r.referees.length} referee${r.referees.length>1?'s':''} saved. Next time Job Copilot offers them here.`;
+    status.className='done';status.textContent=`${r.referees.length} referee${r.referees.length>1?'s':''} saved. Next time Snapply offers them here.`;
     await renderReferees();
   }catch(e){status.className='block';status.textContent=e.message}};
   const after=async msg=>renderReferees(msg);
   if(!saved.length){
-    byId('summary').textContent='References · add a referee here once; next time Job Copilot offers it.';
-    byId('askState').textContent='Referee details belong to other people, so Job Copilot fills them only from referees you saved and confirm.';
+    byId('summary').textContent='References · add a referee here once; next time Snapply offers it.';
+    byId('askState').textContent='Referee details belong to other people, so Snapply fills them only from referees you saved and confirm.';
     list.append(await refereeFormCard(after));
     list.append(el('div',{className:'ask-card'},[el('div',{className:'muted',textContent:'Already typed referees on the page? Save them instead:'}),remember,status]));
     byId('askTitle').scrollIntoView({behavior:'smooth',block:'start'});
@@ -293,7 +293,7 @@ function renderAsk(items,{answered=0,unsaved=0,optionalPersonal=0,optional=[]}={
   if(items.length)parts.push(`${items.length} question${items.length>1?'s':''} need your answer. Answers you remember are filled automatically next time.`);
   else if(answered)parts.push(`All ${answered} answered question${answered>1?'s':''} on this page are complete.${unsaved?` ${unsaved} ${unsaved>1?'are':'is'} not saved yet — press “Remember answers on this page” to reuse ${unsaved>1?'them':'it'} on future applications.`:''}`);
   if(optional.length)parts.push(`${optional.length} optional question${optional.length>1?'s are':' is'} below — answer only if ${optional.length>1?'they apply':'it applies'} to you.`);
-  if(optionalPersonal)parts.push('Job Copilot never fills personal data such as date of birth, ethnicity or disability on its own.');
+  if(optionalPersonal)parts.push('Snapply never fills personal data such as date of birth, ethnicity or disability on its own.');
   if(!parts.length)parts.push('There are no questions on this page for you to answer.');
   byId('askState').textContent=parts.join(' ');
   for(const q of items)list.append(askCard(q));

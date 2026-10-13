@@ -1,4 +1,4 @@
-// In-page Job Copilot panel (Simplify-style). On recognised ATS pages the panel opens on the
+// In-page Snapply panel (Simplify-style). On recognised ATS pages the panel opens on the
 // right automatically; closing it leaves a logo button on the right edge to reopen it. The panel is popup.html
 // in an iframe, so it is the same UI and code as the toolbar popup. Never submits anything.
 (function(){
@@ -61,18 +61,18 @@
   const root=host.attachShadow({mode:'closed'});
   const atsLabel=ats.charAt(0)+ats.slice(1).toLowerCase();
   root.innerHTML=`<style>${STYLE}</style>
-  <section class="panel" role="complementary" aria-label="Job Copilot">
+  <section class="panel" role="complementary" aria-label="Snapply">
     <header class="bar">
       <img class="logo" src="${LOGO_URL}" alt="">
-      <div class="titles"><div class="title">Job Copilot</div><div class="sub"><span class="dot"></span>${atsLabel} detected · You review and submit</div></div>
-      <button class="hide" type="button" aria-label="Minimise Job Copilot" title="Minimise">
+      <div class="titles"><div class="title">Snapply</div><div class="sub"><span class="dot"></span>${atsLabel} detected · You review and submit</div></div>
+      <button class="hide" type="button" aria-label="Minimise Snapply" title="Minimise">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </header>
   </section>
-  <button class="tab" type="button" aria-label="Open Job Copilot">
+  <button class="tab" type="button" aria-label="Open Snapply">
     <span class="mark"><img src="${LOGO_URL}" alt=""><span class="dot"></span></span>
-    <span class="text"><span class="title">Job Copilot</span><span class="sub">${atsLabel} detected</span></span>
+    <span class="text"><span class="title">Snapply</span><span class="sub">${atsLabel} detected</span></span>
   </button>`;
   const panel=root.querySelector('.panel'),tab=root.querySelector('.tab');
   let frame=null;
@@ -91,7 +91,7 @@
   function open(){
     if(!frame){
       frame=document.createElement('iframe');
-      frame.title='Job Copilot';
+      frame.title='Snapply';
       frame.src=chrome.runtime.getURL('popup.html')+'?embedded=1';
       panel.append(frame);
     }
