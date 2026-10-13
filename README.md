@@ -109,6 +109,7 @@ dedicated filler yet. Hosted mode is built and tested; not yet deployed or publi
 
 ```
 extension/   Chrome extension (MV3): content scripts, ATS adapters, in-page panel, popup UI
+site/        Landing page, privacy policy and terms (static)
 backend/     FastAPI service: CV import, profile, saved answers, AI drafting, grounding, cover letters
 tests/       Regression suites and live-captured form fixtures (no personal data)
 ```

@@ -4,9 +4,9 @@
   const box=()=>document.getElementById('account');
   function button(text,onclick,cls=''){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=cls;b.onclick=onclick;return b}
   function line(text,cls='muted'){const d=document.createElement('div');d.className=cls;d.textContent=text;return d}
-  async function openTab(path){
+  async function openTab(path,payload={}){
     const b=box();b.querySelector('.acct-status')?.remove();
-    try{const d=await API().post(path,{});window.open(d.url,'_blank','noopener')}
+    try{const d=await API().post(path,payload);window.open(d.url,'_blank','noopener')}
     catch(e){b.append(line(e.message,'acct-status muted'))}
   }
   async function render(){
@@ -24,8 +24,14 @@
     const pro=a.plan==='pro';
     b.append(line(`${a.email} · ${pro?'Pro':'Free'} plan`,'acct-title'),
       line(`AI drafts this month: ${a.ai_used} of ${a.ai_limit}`),
-      pro?button('Manage subscription',()=>openTab('/v1/billing/portal')):button('Upgrade to Pro',()=>openTab('/v1/billing/checkout'),'primary-small'),
-      button('Sign out',async()=>{await API().signOut();render()}));
+      ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:[button('Pro · £9.99/month',()=>openTab('/v1/billing/checkout',{interval:'month'}),'primary-small'),button('Pro · £79/year',()=>openTab('/v1/billing/checkout',{interval:'year'}))]),
+      button('Sign out',async()=>{await API().signOut();render()}),
+      button('Delete account',async e=>{
+        // Two-step confirmation inside the panel (no browser dialogs): first click arms, second deletes.
+        if(e.target.dataset.armed!=='1'){e.target.dataset.armed='1';e.target.textContent='Click again to delete your account, CV and saved answers';return}
+        try{await API().del('/v1/me');await chrome.storage.local.remove(['browserAnswers','browserReferees','applicationMemory','savedCV']);await API().signOut();render()}
+        catch(err){b.append(line(err.message,'acct-status muted'))}
+      }));
   }
   async function renderServer(){
     const sel=document.getElementById('serverChoice');if(!sel)return;

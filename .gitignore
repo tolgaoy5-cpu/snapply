@@ -19,3 +19,4 @@ work/
 # Local development notes and assistant context (contain local paths); never published
 private-notes/
 CLAUDE.md
+.claude/

@@ -101,3 +101,15 @@ with TemporaryDirectory() as td:
     assert c.get('/v1/me').json()['local'] is True
     assert c.post('/v1/state/answers', json={**ok, 'sensitivity': 'legal'}).status_code == 200
 print('cloud accounts ok')
+
+# Checkout picks the monthly or yearly price (Stripe call captured, not sent).
+with TemporaryDirectory() as td2:
+    os.environ['JOB_COPILOT_DATA_DIR'] = td2
+    os.environ.update({'STRIPE_SECRET_KEY': 'sk_test_x', 'STRIPE_PRICE_ID': 'price_month', 'STRIPE_PRICE_ID_YEARLY': 'price_year'})
+    calls = []
+    billing._post = lambda path, fields: calls.append((path, fields)) or {'url': 'https://checkout.stripe.com/x'}
+    uid = accounts.user_id_for('sub-c'); accounts.save_account(uid, {'email': 'c@example.com', 'plan': 'free'})
+    billing.checkout_url(uid); billing.checkout_url(uid, 'year')
+    assert [f['line_items[0][price]'] for _, f in calls] == ['price_month', 'price_year']
+    assert calls[0][1]['client_reference_id'] == uid and calls[0][1]['customer_email'] == 'c@example.com'
+    print('checkout prices ok')

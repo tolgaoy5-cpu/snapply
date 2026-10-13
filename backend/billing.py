@@ -1,6 +1,7 @@
 """Stripe subscriptions for the hosted mode, using Stripe's REST API directly (no SDK).
 
-Configuration (environment): STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET,
+Configuration (environment): STRIPE_SECRET_KEY, STRIPE_PRICE_ID (monthly, £9.99),
+STRIPE_PRICE_ID_YEARLY (£79), STRIPE_WEBHOOK_SECRET,
 SNAPPLY_PUBLIC_URL (where Checkout returns to). Test-mode keys (sk_test_...) work unchanged.
 """
 from __future__ import annotations
@@ -49,17 +50,26 @@ def _return_url() -> str:
     return os.environ.get("SNAPPLY_PUBLIC_URL", "https://snapply.co.uk").rstrip("/")
 
 
-def checkout_url(uid: str) -> str:
+def price_for(interval: str) -> str:
+    if interval == "year":
+        price = os.environ.get("STRIPE_PRICE_ID_YEARLY", "")
+        if not price:
+            raise BillingError("Yearly plan is not available yet")
+        return price
+    return os.environ.get("STRIPE_PRICE_ID", "")
+
+
+def checkout_url(uid: str, interval: str = "month") -> str:
     account = accounts.load_account(uid)
     fields = {
         "mode": "subscription",
-        "line_items[0][price]": os.environ.get("STRIPE_PRICE_ID", ""),
+        "line_items[0][price]": price_for(interval),
         "line_items[0][quantity]": "1",
         "client_reference_id": uid,
         "subscription_data[metadata][uid]": uid,
         "allow_promotion_codes": "true",
         "success_url": _return_url() + "/thanks",
-        "cancel_url": _return_url() + "/pricing",
+        "cancel_url": _return_url() + "/#pricing",
     }
     if account.get("stripe_customer"):
         fields["customer"] = account["stripe_customer"]

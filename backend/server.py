@@ -310,13 +310,16 @@ def me_delete():
     accounts.delete_user(uid)
     return {'ok':True,'deleted':True}
 
+class CheckoutRequest(BaseModel):
+    interval:str=Field(default='month',pattern='^(month|year)$')
+
 @app.post('/v1/billing/checkout')
-def billing_checkout():
+def billing_checkout(r:CheckoutRequest=CheckoutRequest()):
     uid=accounts.current_uid.get()
     if uid is None:
         raise HTTPException(status_code=404,detail='Local mode has no subscription')
     try:
-        return {'ok':True,'url':billing.checkout_url(uid)}
+        return {'ok':True,'url':billing.checkout_url(uid,r.interval)}
     except billing.BillingError as e:
         raise HTTPException(status_code=503,detail=str(e))
 
