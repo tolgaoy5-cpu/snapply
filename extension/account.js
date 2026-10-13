@@ -1,0 +1,39 @@
+// Account bar: sign-in, plan and AI allowance on the hosted service; server choice in Advanced.
+(function(){
+  const API=()=>window.JobCopilotAPI;
+  const box=()=>document.getElementById('account');
+  function button(text,onclick,cls=''){const b=document.createElement('button');b.type='button';b.textContent=text;b.className=cls;b.onclick=onclick;return b}
+  function line(text,cls='muted'){const d=document.createElement('div');d.className=cls;d.textContent=text;return d}
+  async function openTab(path){
+    const b=box();b.querySelector('.acct-status')?.remove();
+    try{const d=await API().post(path,{});window.open(d.url,'_blank','noopener')}
+    catch(e){b.append(line(e.message,'acct-status muted'))}
+  }
+  async function render(){
+    const b=box();if(!b)return;b.replaceChildren();
+    const m=await API().mode();
+    if(m.auth!=='google'){b.hidden=true;return}
+    b.hidden=false;
+    if(!await API().session()){
+      b.append(line('Sign in to use Snapply','acct-title'),
+        line('Your CV and saved answers are kept in your account. Personal and legal answers and referees stay in this browser only.'),
+        button('Sign in with Google',async e=>{e.target.disabled=true;try{await API().signIn();render();window.dispatchEvent(new Event('snapply-signed-in'))}catch(err){b.append(line(err.message,'acct-status muted'));e.target.disabled=false}},'primary-small'));
+      return;
+    }
+    let a;try{a=await API().account()}catch(e){b.append(line(e.message));return}
+    const pro=a.plan==='pro';
+    b.append(line(`${a.email} · ${pro?'Pro':'Free'} plan`,'acct-title'),
+      line(`AI drafts this month: ${a.ai_used} of ${a.ai_limit}`),
+      pro?button('Manage subscription',()=>openTab('/v1/billing/portal')):button('Upgrade to Pro',()=>openTab('/v1/billing/checkout'),'primary-small'),
+      button('Sign out',async()=>{await API().signOut();render()}));
+  }
+  async function renderServer(){
+    const sel=document.getElementById('serverChoice');if(!sel)return;
+    sel.value=(await API().base())===API().CLOUD?'cloud':'local';
+    sel.onchange=async()=>{await API().setBase(sel.value==='cloud'?API().CLOUD:API().LOCAL);await API().signOut();location.reload()};
+  }
+  window.addEventListener('snapply-signed-out',render);
+  document.addEventListener('DOMContentLoaded',()=>{render();renderServer()});
+  if(document.readyState!=='loading'){render();renderServer()}
+  window.SnapplyAccount={render};
+})();

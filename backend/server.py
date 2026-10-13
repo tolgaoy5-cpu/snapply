@@ -17,16 +17,43 @@ from profile_review import review_items, resolve_profile
 from state_store import load_state, set_master_profile, set_memory_item, replace_memory, upsert_saved_answer, delete_saved_answer, set_referees, save_cv, get_saved_cv_meta, get_saved_cv_bytes, forget_saved_cv
 from cover_letter import generate as generate_cover_letter, render as render_cover_letter
 from origin_policy import EXTENSION_ORIGIN, origin_allowed
+import accounts
+import billing
 
-app=FastAPI(title='Snapply Core API',version='0.26.31')
+app=FastAPI(title='Snapply Core API',version='0.27.0')
 app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=EXTENSION_ORIGIN,
-                   allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type'])
+                   allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
+
+# Routes that work without a session in cloud mode.
+PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook'}
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
     if not origin_allowed(request.headers.get('origin')):
-        return JSONResponse(status_code=403,content={'detail':'Origin is not allowed on this local API.'})
+        return JSONResponse(status_code=403,content={'detail':'Origin is not allowed on this API.'})
+    if accounts.cloud_mode() and request.url.path not in PUBLIC_PATHS and request.method!='OPTIONS':
+        header=request.headers.get('authorization') or ''
+        if not header.lower().startswith('bearer '):
+            return JSONResponse(status_code=401,content={'detail':'Please sign in to Snapply.'})
+        try:
+            uid=accounts.verify_session(header[7:].strip())
+        except accounts.AuthError as e:
+            return JSONResponse(status_code=401,content={'detail':str(e)})
+        if not accounts.load_account(uid):
+            return JSONResponse(status_code=401,content={'detail':'Account not found, please sign in again.'})
+        accounts.current_uid.set(uid)
+        accounts.current_user_dir.set(accounts.user_dir(uid))
     return await call_next(request)
+
+def _consume_ai(units:int=1):
+    try:
+        accounts.consume_ai(accounts.current_uid.get(),units)
+    except accounts.QuotaError as e:
+        raise HTTPException(status_code=402,detail=str(e))
+
+# Special-category and legal declarations, and other people's details (referees), never leave
+# the user's browser in cloud mode; the extension keeps them in chrome.storage.local.
+BROWSER_ONLY_SENSITIVITY={'legal','sensitive'}
 
 class JobCapture(BaseModel):
     title:str=''; company:str=''; url:str=''; text:str=''
@@ -55,6 +82,7 @@ class CoverLetterRenderRequest(BaseModel):
 @app.post('/v1/cover-letter/generate')
 def cover_letter_generate(r:CoverLetterRequest):
     profile=_refresh_profile_from_saved_cv_if_needed().get('master_profile') or {}
+    _consume_ai()
     try:
         return generate_cover_letter(profile,r.job,transferable=r.transferable)
     except ProviderError as e:
@@ -74,6 +102,7 @@ def _generate_one(r:AnswerRequest)->dict[str,Any]:
     if not allowed:
         return {'status':'ASK_USER','plan':plan,'answer':'','validation':{'valid':False,'reason':'No supported evidence'},'insert_allowed':False}
     context=f"{r.job.get('title') or ''} {r.job.get('company') or ''}"
+    _consume_ai()
     try:
         drafted=grounded_rewrite(rewrite,r.question,plan,r.character_limit,allowed,context)
     except ProviderError as e:
@@ -197,6 +226,8 @@ def state_answer_upsert(r:SavedAnswerRequest):
         raise HTTPException(status_code=422,detail='kind must be text or choice')
     if r.sensitivity=='never':
         raise HTTPException(status_code=422,detail='This question type is never stored')
+    if accounts.cloud_mode() and r.sensitivity in BROWSER_ONLY_SENSITIVITY:
+        raise HTTPException(status_code=422,detail='Personal and legal answers are kept in your browser only')
     item={'signature':r.signature.strip(),'question':r.question.strip(),'value':r.value.strip(),'kind':r.kind,
           'sensitivity':r.sensitivity,'confirmed_at':r.confirmed_at,'source':r.source or 'user_confirmed'}
     if not item['signature'] or not item['value']:
@@ -231,6 +262,8 @@ def state_cv_delete():
 
 @app.post('/v1/state/referees')
 def state_referees(r:RefereesRequest):
+    if accounts.cloud_mode():
+        raise HTTPException(status_code=422,detail='Referees are kept in your browser only')
     clean=[]
     for ref in r.referees:
         fields={str(k)[:80]:str(v)[:300] for k,v in (ref.get('fields') or {}).items() if str(v).strip()}
@@ -245,7 +278,66 @@ def ai_status():
 
 @app.get('/health')
 def health():
-    return {'ok':True,'version':'0.26.31'}
+    return {'ok':True,'version':'0.27.0','auth':'google' if accounts.cloud_mode() else 'none',
+            'google_client_id':os.environ.get('GOOGLE_CLIENT_ID','').split(',')[0].strip() if accounts.cloud_mode() else '',
+            'billing':billing.configured()}
+
+class GoogleSignIn(BaseModel):
+    id_token:str=Field(min_length=20,max_length=8000)
+
+@app.post('/v1/auth/google')
+def auth_google(r:GoogleSignIn):
+    if not accounts.cloud_mode():
+        raise HTTPException(status_code=404,detail='Sign-in is only used by the hosted service')
+    try:
+        token,account=accounts.sign_in(accounts.verify_google_id_token(r.id_token))
+    except accounts.AuthError as e:
+        raise HTTPException(status_code=401,detail=str(e))
+    return {'ok':True,'session':token,'account':account}
+
+@app.get('/v1/me')
+def me():
+    uid=accounts.current_uid.get()
+    if uid is None:
+        return {'ok':True,'local':True,'account':{'plan':'local','ai_used':0,'ai_limit':None}}
+    return {'ok':True,'local':False,'account':accounts.public_account(uid)}
+
+@app.delete('/v1/me')
+def me_delete():
+    uid=accounts.current_uid.get()
+    if uid is None:
+        raise HTTPException(status_code=404,detail='Local mode has no account')
+    accounts.delete_user(uid)
+    return {'ok':True,'deleted':True}
+
+@app.post('/v1/billing/checkout')
+def billing_checkout():
+    uid=accounts.current_uid.get()
+    if uid is None:
+        raise HTTPException(status_code=404,detail='Local mode has no subscription')
+    try:
+        return {'ok':True,'url':billing.checkout_url(uid)}
+    except billing.BillingError as e:
+        raise HTTPException(status_code=503,detail=str(e))
+
+@app.post('/v1/billing/portal')
+def billing_portal():
+    uid=accounts.current_uid.get()
+    if uid is None:
+        raise HTTPException(status_code=404,detail='Local mode has no subscription')
+    try:
+        return {'ok':True,'url':billing.portal_url(uid)}
+    except billing.BillingError as e:
+        raise HTTPException(status_code=400,detail=str(e))
+
+@app.post('/v1/billing/webhook')
+async def billing_webhook(request:Request):
+    body=await request.body()
+    try:
+        event=billing.verify_webhook(body,request.headers.get('stripe-signature',''))
+    except billing.BillingError as e:
+        raise HTTPException(status_code=400,detail=str(e))
+    return {'ok':True,'result':billing.handle_event(event)}
 
 @app.post('/v1/job/analyze')
 def job_analyze(p:JobCapture):

@@ -1,0 +1,23 @@
+# Fly.io deployment for the hosted API (london region). Secrets are set with `fly secrets set`,
+# never in this file: SNAPPLY_SECRET, GOOGLE_CLIENT_ID, OPENAI_API_KEY, STRIPE_SECRET_KEY,
+# STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET.
+app = "snapply-api"
+primary_region = "lhr"
+
+[env]
+  SNAPPLY_PUBLIC_URL = "https://snapply.co.uk"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[mounts]]
+  source = "snapply_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

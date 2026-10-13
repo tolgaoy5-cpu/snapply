@@ -284,7 +284,8 @@ function askCard(q){
 }
 // AI drafting is offered only when the local backend reports a configured model (key never reaches the panel).
 let aiReady=false;
-window.JobCopilotAPI?.get?.('/v1/ai/status').then(s=>{aiReady=!!s?.configured}).catch(()=>{});
+const refreshAiReady=()=>window.JobCopilotAPI?.get?.('/v1/ai/status').then(s=>{aiReady=!!s?.configured}).catch(()=>{});
+refreshAiReady();window.addEventListener('snapply-signed-in',refreshAiReady);
 function renderAsk(items,{answered=0,unsaved=0,optionalPersonal=0,optional=[]}={}){
   const list=byId('askList');list.replaceChildren();
   byId('askTitle').style.display=items.length||optional.length?'':'none';

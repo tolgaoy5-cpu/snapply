@@ -65,6 +65,12 @@ minimises to a launcher.
 - Personal data stays on your computer; only matching CV evidence is sent to the AI provider, and
   only when you ask for a draft.
 
+## Hosted mode
+
+The backend also runs as a multi-user service (`SNAPPLY_MODE=cloud`): Google sign-in, per-user
+storage, monthly AI allowances, Stripe subscriptions, and **legal/personal answers and referees kept
+in the browser only**. See [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Run it locally (developer setup)
 
 Requirements: Chrome, Python 3.10+.
@@ -86,17 +92,18 @@ Your data lives in `~/.job-copilot/` (profile, saved CV, saved answers, referees
 ./run_tests.sh
 ```
 
-16 regression suites (Node and Python) use mocks, synthetic data and temporary data directories:
+18 regression suites (Node and Python) use mocks, synthetic data and temporary data directories:
 Workday date commit and multiselect detection, question matching and sensitivity classes,
 saved answers and referee persistence, TRAC referee capture/fill, field-rule word boundaries,
-requirement extraction, the AI grounding check, and the cover letter review/attach flow.
+requirement extraction, the AI grounding check, and the cover letter review/attach flow, cloud accounts (sign-in, isolation, quotas, Stripe
+webhooks, deletion) and browser-only storage of sensitive answers.
 
 ## Project status
 
 Working prototype, verified page by page on live Workday, Greenhouse and TRAC applications.
 Known limits: Workday multi-select and date-of-birth questions are read and remembered but filled
 by the user; location search lists are left to the user; Lever/Ashby have detection but no
-dedicated filler yet. Not yet packaged for the Chrome Web Store (no hosted backend or accounts).
+dedicated filler yet. Hosted mode is built and tested; not yet deployed or published on the Chrome Web Store.
 
 ## Repository layout
 

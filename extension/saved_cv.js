@@ -23,7 +23,7 @@
   }
   async function fetchBackendPayload(){
     const meta=await backendMeta(); if(!meta) return null;
-    const base=await window.JobCopilotAPI.base(); const r=await fetch(base+'/v1/state/cv/content');
+    const r=await window.JobCopilotAPI.raw('/v1/state/cv/content');
     if(!r.ok) throw new Error(`Saved CV fetch failed: ${r.status}`);
     const buf=await r.arrayBuffer();
     return {name:meta.name||'cv',type:meta.type||r.headers.get('content-type')||'application/octet-stream',size:buf.byteLength,lastModified:Date.now(),base64:arrayBufferToBase64(buf),saved_at:meta.saved_at||null,storage:'backend'};
@@ -47,7 +47,7 @@
   }
   async function forget(){
     await chrome.storage.local.remove(KEY);
-    try{const base=await window.JobCopilotAPI.base(); await fetch(base+'/v1/state/cv',{method:'DELETE'});}catch(_){}
+    try{await window.JobCopilotAPI.raw('/v1/state/cv',{method:'DELETE'});}catch(_){}
   }
   window.JobCopilotSavedCV={saveLocal,get,getPayload,forget,MAX_BYTES};
 })();

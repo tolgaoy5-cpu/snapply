@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Snapply",
-  "version": "0.26.69",
+  "version": "0.27.0",
   "description": "Fills job applications from your CV, remembers your answers and drafts grounded AI answers — you review and submit.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "identity"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -62,7 +63,9 @@
   ],
   "host_permissions": [
     "http://127.0.0.1/*",
-    "http://localhost/*"
+    "http://localhost/*",
+    "https://snapply-api.fly.dev/*",
+    "https://api.snapply.co.uk/*"
   ],
   "web_accessible_resources": [
     {

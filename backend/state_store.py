@@ -7,10 +7,16 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
+from accounts import current_user_dir
+
 _LOCK = RLock()
 
 
 def _data_dir() -> Path:
+    # In cloud mode each request runs with its signed-in user's own directory.
+    user = current_user_dir.get()
+    if user is not None:
+        return user
     override = os.environ.get("JOB_COPILOT_DATA_DIR")
     if override:
         return Path(override).expanduser().resolve()

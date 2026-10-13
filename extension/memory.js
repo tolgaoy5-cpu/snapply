@@ -5,16 +5,17 @@
     'driving_licence','right_to_work','sponsorship','country','postcode','title','recent_nhs_experience',
     'address','address_line2','address_line3','city','phone_device_type','phone_extension','phone_country_code','application_source'
   ]);
-  const DEFAULT_API='http://127.0.0.1:8787';
-  async function apiBase(){
-    const {apiBase}=await chrome.storage.local.get('apiBase');
-    return apiBase||DEFAULT_API;
-  }
+  // On the hosted service, legal declarations, personal (special-category) answers and referees
+  // never leave this browser: they live in chrome.storage.local only.
+  const BROWSER_ONLY_KEYS=new Set(['right_to_work','sponsorship']);
+  const BROWSER_ONLY_SENSITIVITY=new Set(['legal','sensitive']);
   async function api(path,opts={}){
-    const r=await fetch((await apiBase())+path,opts);
+    const r=await window.JobCopilotAPI.raw(path,opts);
     if(!r.ok) throw new Error(`API ${r.status}: ${await r.text()}`);
     return r.json();
   }
+  const cloud=()=>window.JobCopilotAPI.isCloud();
+  async function browserGet(key,fallback){const x=await chrome.storage.local.get(key);return x[key]??fallback}
   async function localGet(){
     const {applicationMemory}=await chrome.storage.local.get('applicationMemory');
     return applicationMemory||{};
@@ -22,8 +23,9 @@
   async function syncFromBackend(){
     try{
       const state=await api('/v1/state');
-      const memory=state.application_memory||{};
+      const memory={...(state.application_memory||{})};
       const cached=await localGet();
+      if(await cloud())BROWSER_ONLY_KEYS.forEach(k=>{if(cached[k])memory[k]=cached[k]});
       // A newly started backend with an empty/misconfigured data directory must
       // not silently erase confirmed answers cached by the extension.
       const effective=(!Object.keys(memory).length&&Object.keys(cached).length)?cached:memory;
@@ -45,12 +47,17 @@
     const clean=String(value??'').trim();
     if(!clean) throw new Error('Confirmed answer cannot be empty');
     const item={value:clean,confirmed_at:new Date().toISOString(),source:meta.source||'user_confirmed'};
+    if(BROWSER_ONLY_KEYS.has(key)&&await cloud()){
+      const all=await localGet();all[key]=item;await chrome.storage.local.set({applicationMemory:all});return item;
+    }
     try{
       const d=await api('/v1/state/memory/item',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({key,value:clean,confirmed_at:item.confirmed_at,source:item.source})
       });
-      await chrome.storage.local.set({applicationMemory:d.application_memory||{[key]:d.item}});
+      const kept=await localGet();const next={...(d.application_memory||{[key]:d.item})};
+      BROWSER_ONLY_KEYS.forEach(k=>{if(kept[k])next[k]=kept[k]});
+      await chrome.storage.local.set({applicationMemory:next});
       return d.item||item;
     }catch(e){
       // Local fallback keeps prototype usable if backend temporarily stops.
@@ -72,19 +79,34 @@
   // the user's own declarations, so there is no silent local fallback that could diverge.
   async function getAnswers(){
     const state=await api('/v1/state');
-    return Object.values(state.saved_answers||{});
+    const local=await browserGet('browserAnswers',{});
+    return Object.values({...(state.saved_answers||{}),...local});
   }
   async function saveAnswer({signature,question,value,kind,sensitivity}){
+    if(BROWSER_ONLY_SENSITIVITY.has(sensitivity)&&await cloud()){
+      const now=new Date().toISOString();const all=await browserGet('browserAnswers',{});
+      const item={signature,question,value:String(value??'').trim(),kind,sensitivity,confirmed_at:now,source:'user_confirmed',storage:'browser',created_at:all[signature]?.created_at||now};
+      all[signature]=item;await chrome.storage.local.set({browserAnswers:all});return item;
+    }
     const d=await api('/v1/state/answers',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({signature,question,value:String(value??'').trim(),kind,sensitivity,confirmed_at:new Date().toISOString(),source:'user_confirmed'})});
     return d.item;
   }
   async function deleteAnswer(signature){
+    const all=await browserGet('browserAnswers',{});
+    if(all[signature]){delete all[signature];await chrome.storage.local.set({browserAnswers:all});if(await cloud())return {ok:true}}
     return api('/v1/state/answers/'+encodeURIComponent(signature),{method:'DELETE'});
   }
   // Saved referees (other people's details the user entered once and confirms before each use).
-  async function getReferees(){const state=await api('/v1/state');return state.referees||[]}
+  async function getReferees(){
+    if(await cloud())return browserGet('browserReferees',[]);
+    const state=await api('/v1/state');return state.referees||[];
+  }
   async function saveReferees(referees){
+    if(await cloud()){
+      const clean=(referees||[]).filter(r=>r&&r.fields).slice(0,10);
+      await chrome.storage.local.set({browserReferees:clean});return clean;
+    }
     const d=await api('/v1/state/referees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({referees})});
     return d.referees||[];
   }
