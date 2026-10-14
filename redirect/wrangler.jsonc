@@ -1,0 +1,9 @@
+{
+  "name": "snapply-redirect",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-12",
+  "routes": [
+    { "pattern": "getsnapply.com", "custom_domain": true },
+    { "pattern": "www.getsnapply.com", "custom_domain": true }
+  ]
+}

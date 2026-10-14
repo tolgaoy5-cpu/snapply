@@ -20,3 +20,11 @@ work/
 private-notes/
 CLAUDE.md
 .claude/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
+.wrangler/
+redirect/.wrangler/
