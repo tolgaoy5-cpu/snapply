@@ -28,3 +28,4 @@ CLAUDE.md
 !.env.example
 .wrangler/
 redirect/.wrangler/
+dist/

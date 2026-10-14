@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Snapply store assets</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--b1:#ff7a3d;--b2:#ff2d87;--b3:#7c3aed;--brand:linear-gradient(120deg,var(--b1),var(--b2) 50%,var(--b3));
+  --ink:#0f172a;--ink2:#334155;--muted:#64748b;--line:#e9edf3;--soft:#faf5ff;--soft-line:#ede4fd;--ok:#059669}
+*{box-sizing:border-box}html,body{margin:0}
+body{font:16px/1.5 Inter,system-ui,sans-serif;color:var(--ink);background:#fbfaff;-webkit-font-smoothing:antialiased}
+.shot{width:1280px;height:800px;display:none;position:relative;overflow:hidden;background:radial-gradient(1200px 600px at 85% -10%,rgba(255,45,135,.12),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(124,58,237,.12),transparent 60%),#fbfaff}
+.tile{width:440px;height:280px;display:none;background:var(--brand);color:#fff;padding:34px;position:relative;overflow:hidden}
+:target{display:block}
+.copy{position:absolute;left:72px;top:96px;width:470px}
+.brand{display:flex;gap:12px;align-items:center;font-weight:800;font-size:24px;letter-spacing:-.02em}
+.brand img{width:44px;height:44px;border-radius:12px;box-shadow:0 6px 16px rgba(255,45,135,.3)}
+h1{font-size:54px;line-height:1.05;letter-spacing:-.035em;margin:34px 0 18px}
+h1 .g{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:21px;color:var(--ink2)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+.chips span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 14px;font-size:15px;color:var(--ink2);font-weight:500}
+/* fake application page */
+.page{position:absolute;right:56px;top:64px;width:640px;height:672px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 30px 70px rgba(15,23,42,.10);overflow:hidden}
+.page .top{height:46px;background:#f1f5f9;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 16px}
+.page .top i{width:11px;height:11px;border-radius:50%;background:#cbd5e1;display:block}
+.page .top b{margin-left:14px;font-weight:500;font-size:13px;color:var(--muted);background:#fff;border-radius:8px;padding:4px 12px;width:300px}
+.form{padding:26px 28px;width:330px}
+.form h4{margin:0 0 14px;font-size:17px}
+.f{margin-bottom:14px}.f label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.f div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;min-height:37px}
+.f div.on{border-color:#a7f3d0;background:#f0fdf4}
+.panel{position:absolute;right:0;top:46px;bottom:0;width:286px;background:#fff;border-left:1px solid var(--soft-line);padding:16px;box-shadow:-10px 0 30px rgba(124,58,237,.08)}
+.pbar{display:flex;gap:9px;align-items:center;margin-bottom:12px}.pbar img{width:30px;height:30px;border-radius:9px}
+.pbar b{font-size:15px}.pbar small{display:block;color:var(--muted);font-size:11px}
+.go{background:var(--brand);color:#fff;border-radius:12px;padding:11px;text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;box-shadow:0 8px 20px rgba(255,45,135,.28)}
+.row{display:flex;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13px}
+.row em{font-style:normal;color:var(--ok);font-weight:700}
+.ask{background:var(--soft);border:1px solid var(--soft-line);border-radius:12px;padding:11px;margin-top:10px;font-size:13px}
+.ask .q{font-weight:600}.ask .c{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.ask .c span{border:1px solid var(--soft-line);background:#fff;border-radius:7px;padding:2px 9px;font-size:12px}
+.ask .c span.on{background:var(--b3);border-color:var(--b3);color:#fff}
+.note{font-size:11px;color:var(--muted);margin-top:6px}
+.btn{display:inline-block;background:var(--brand);color:#fff;border-radius:9px;padding:6px 12px;font-weight:700;font-size:12px;margin-top:8px}
+.lock{display:inline-block;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;font-size:11px;padding:1px 8px;margin-left:6px;font-weight:600}
+.letter{font-size:12.5px;color:var(--ink2);line-height:1.55;border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px}
+.letter mark{background:#ecfdf5;color:inherit;border-radius:3px;padding:0 2px}
+.check{font-size:12px;color:var(--ok);font-weight:600;margin-top:8px}
+.big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+.list{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:900px;margin-top:40px;text-align:left}
+.list div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 22px;font-size:16px;color:var(--ink2)}
+.list b{display:block;color:var(--ink);font-size:18px;margin-bottom:4px}
+.tile .brand{font-size:30px}.tile .brand img{width:56px;height:56px;border-radius:15px;box-shadow:none}
+.tile h2{font-size:34px;margin:30px 0 6px;letter-spacing:-.03em;line-height:1.05}
+.tile p{margin:0;font-size:16px;opacity:.92}
+.tile .spark{position:absolute;right:-30px;top:-30px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.12)}
+</style>
+</head>
+<body>
+
+<section class="shot" id="s1">
+  <div class="copy">
+    <div class="brand"><img src="../site/logo.png" alt="">Snapply</div>
+    <h1>Snap. Apply. <span class="g">Done.</span></h1>
+    <div class="lead">Fill every page of a job application from your CV in one click — work history, education, dates and contact details.</div>
+    <div class="chips"><span>Workday</span><span>Greenhouse</span><span>NHS Jobs · TRAC</span><span>Lever</span><span>Ashby</span></div>
+  </div>
+  <div class="page">
+    <div class="top"><i></i><i></i><i></i><b>careers.example.com/apply</b></div>
+    <div class="form">
+      <h4>My Experience</h4>
+      <div class="f"><label>Job title</label><div class="on">Finance Manager</div></div>
+      <div class="f"><label>Company</label><div class="on">Northbridge Properties</div></div>
+      <div class="f"><label>From</label><div class="on">03/2021</div></div>
+      <div class="f"><label>To</label><div class="on">Present</div></div>
+      <div class="f"><label>School</label><div class="on">University of Leeds</div></div>
+      <div class="f"><label>Degree</label><div class="on">MSc Finance</div></div>
+    </div>
+    <div class="panel">
+      <div class="pbar"><img src="../site/logo.png" alt=""><div><b>Snapply</b><small>Workday detected · You review and submit</small></div></div>
+      <div class="go">Fill this page</div>
+      <div class="row">Work experience · 4 roles <em>✓</em></div>
+      <div class="row">Education · 2 entries <em>✓</em></div>
+      <div class="row">Dates accepted by Workday <em>✓ 11/11</em></div>
+      <div class="row">Languages <em>✓</em></div>
+      <div class="note">Snapply never presses the final Submit button.</div>
+    </div>
+  </div>
+</section>
+
+<section class="shot" id="s2">
+  <div class="copy">
+    <div class="brand"><img src="../site/logo.png" alt="">Snapply</div>
+    <h1>Answer once.<br><span class="g">Reused forever.</span></h1>
+    <div class="lead">New question? Answer it in the panel. The same or a reworded question on any other site is filled for you next time.</div>
+  </div>
+  <div class="page">
+    <div class="top"><i></i><i></i><i></i><b>boards.example.com/jobs/apply</b></div>
+    <div class="form">
+      <h4>Application questions</h4>
+      <div class="f"><label>What is your notice period?</label><div class="on">1 month</div></div>
+      <div class="f"><label>Expected salary</label><div class="on">£45,000</div></div>
+      <div class="f"><label>Are you willing to relocate?</label><div class="on">No</div></div>
+      <div class="f"><label>Do you have the right to work in the UK?</label><div></div></div>
+    </div>
+    <div class="panel">
+      <div class="pbar"><img src="../site/logo.png" alt=""><div><b>Snapply</b><small>Greenhouse detected</small></div></div>
+      <div class="row">Notice period <em>✓ remembered</em></div>
+      <div class="row">Expected salary <em>✓ remembered</em></div>
+      <div class="ask"><div class="q">Do you have the right to work in the UK? <span class="lock">Confirm each time</span></div>
+        <div class="c"><span class="on">Yes</span><span>No</span></div>
+        <div class="note">Legal and personal answers are suggested, never filled silently — and they stay in your browser.</div>
+        <span class="btn">Fill &amp; remember</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="shot" id="s3">
+  <div class="copy">
+    <div class="brand"><img src="../site/logo.png" alt="">Snapply</div>
+    <h1>Honest AI,<br><span class="g">built on your CV.</span></h1>
+    <div class="lead">Cover letters and written answers drafted only from experience you really have. Every sentence is checked against your CV.</div>
+  </div>
+  <div class="page">
+    <div class="top"><i></i><i></i><i></i><b>jobs.example.com/apply/cover-letter</b></div>
+    <div class="form">
+      <h4>Cover letter</h4>
+      <div class="f"><label>Upload</label><div class="on">Cover-letter.pdf ✓ attached</div></div>
+      <div class="f"><label>Why do you want this role?</label><div style="min-height:150px;color:var(--muted)">Drafted in Snapply — you review before inserting.</div></div>
+    </div>
+    <div class="panel">
+      <div class="pbar"><img src="../site/logo.png" alt=""><div><b>Snapply</b><small>Cover letter</small></div></div>
+      <div class="go">Generate from current job</div>
+      <div class="letter">In my current role I <mark>prepare the monthly management accounts</mark> and <mark>lead the annual budget</mark> for a portfolio of 400 properties. I <mark>hold an MSc in Finance</mark> and the FMVA certification…</div>
+      <div class="check">✓ Every sentence supported by your CV</div>
+      <div class="note">Unsupported claims are rewritten or removed before you see them.</div>
+    </div>
+  </div>
+</section>
+
+<section class="shot" id="s4">
+  <div class="big">
+    <div class="brand"><img src="../site/logo.png" alt="">Snapply</div>
+    <h1 style="margin-top:26px">Private <span class="g">by design.</span></h1>
+    <div class="lead">Job applications ask for your most sensitive details. Snapply treats them that way.</div>
+    <div class="list">
+      <div><b>Stays in your browser</b>Right to work, convictions, equality data and referees never reach our servers.</div>
+      <div><b>Never submits for you</b>Snapply fills and checks. The final submit button is always yours.</div>
+      <div><b>No invented facts</b>Anything not in your CV is asked, not guessed.</div>
+      <div><b>Delete everything</b>One button removes your account, CV and saved answers.</div>
+    </div>
+  </div>
+</section>
+
+<section class="tile" id="tile">
+  <div class="spark"></div>
+  <div class="brand"><img src="../site/logo.png" alt="">Snapply</div>
+  <h2>Snap. Apply. Done.</h2>
+  <p>Fill job applications from your CV — honest AI, private by design.</p>
+</section>
+
+</body>
+</html>
