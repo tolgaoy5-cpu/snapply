@@ -29,7 +29,7 @@
       button('Delete account',async e=>{
         // Two-step confirmation inside the panel (no browser dialogs): first click arms, second deletes.
         if(e.target.dataset.armed!=='1'){e.target.dataset.armed='1';e.target.textContent='Click again to delete your account, CV and saved answers';return}
-        try{await API().del('/v1/me');await chrome.storage.local.remove(['browserAnswers','browserReferees','applicationMemory','savedCV']);await API().signOut();render()}
+        try{await API().del('/v1/me');await chrome.storage.local.remove([await API().accountKey('browserAnswers'),await API().accountKey('browserReferees')]);await API().signOut();render()}
         catch(err){b.append(line(err.message,'acct-status muted'))}
       }));
   }

@@ -4,7 +4,7 @@
   const LOCAL='http://127.0.0.1:8787';
   const CLOUD='https://snapply-api.fly.dev';
   async function base(){const x=await chrome.storage.local.get('apiBase');return x.apiBase||LOCAL}
-  async function setBase(url){await chrome.storage.local.set({apiBase:url});healthCache=null}
+  async function setBase(url){await chrome.storage.local.set({apiBase:url});healthCache=null;await ensureScope()}
   let healthCache=null;
   // Server mode: {auth:'none'} locally, {auth:'google', google_client_id} on the hosted service.
   async function mode(){
@@ -13,8 +13,25 @@
   }
   async function isCloud(){return (await mode()).auth==='google'}
   async function session(){return (await chrome.storage.local.get('snapplySession')).snapplySession||''}
+  // Account id from the session token's (unsigned-readable) payload; '' when signed out or local.
+  function sessionUid(token){
+    try{const p=token.split('.')[0].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(p+'='.repeat((4-p.length%4)%4))).uid||''}
+    catch(_){return ''}
+  }
+  async function uid(){return sessionUid(await session())}
+  // Cached copies of server data belong to one server + account. When either changes, drop them so a
+  // different account (or the local server) never shows the previous person's CV or answers.
+  const CACHE_KEYS=['masterProfile','applicationMemory','savedCV','currentJob','coverLetterDraft','answerQueueV012','jobCopilotSession'];
+  async function ensureScope(){
+    const scope=(await base())+'|'+(await uid());
+    const {cacheScope}=await chrome.storage.local.get('cacheScope');
+    if(cacheScope!==scope){await chrome.storage.local.remove(CACHE_KEYS);await chrome.storage.local.set({cacheScope:scope})}
+  }
+  // Browser-only data (legal/personal answers, referees) is kept per account.
+  async function accountKey(name){const id=await uid();return id?`${name}:${id}`:name}
   // fetch() with the session attached; returns the raw Response.
   async function raw(path,opts={}){
+    await ensureScope();
     const headers={...(opts.headers||{})};
     const token=await session(); if(token)headers.Authorization='Bearer '+token;
     const r=await fetch((await base())+path,{...opts,headers});
@@ -48,9 +65,10 @@
     if(!idToken)throw new Error('Google sign-in was cancelled.');
     const d=await post('/v1/auth/google',{id_token:idToken});
     await chrome.storage.local.set({snapplySession:d.session});
+    await ensureScope();
     return d.account;
   }
-  async function signOut(){await chrome.storage.local.remove('snapplySession')}
+  async function signOut(){await chrome.storage.local.remove('snapplySession');await ensureScope()}
   async function account(){return (await get('/v1/me')).account}
-  window.JobCopilotAPI={get,post,del,raw,base,setBase,mode,isCloud,session,uploadCV,signIn,signOut,account,LOCAL,CLOUD};
+  window.JobCopilotAPI={get,post,del,raw,base,setBase,mode,isCloud,session,uid,ensureScope,accountKey,uploadCV,signIn,signOut,account,LOCAL,CLOUD};
 })();

@@ -15,7 +15,8 @@
     return r.json();
   }
   const cloud=()=>window.JobCopilotAPI.isCloud();
-  async function browserGet(key,fallback){const x=await chrome.storage.local.get(key);return x[key]??fallback}
+  async function browserGet(name,fallback){const key=await window.JobCopilotAPI.accountKey(name);const x=await chrome.storage.local.get(key);return x[key]??fallback}
+  async function browserSet(name,value){await chrome.storage.local.set({[await window.JobCopilotAPI.accountKey(name)]:value})}
   async function localGet(){
     const {applicationMemory}=await chrome.storage.local.get('applicationMemory');
     return applicationMemory||{};
@@ -86,7 +87,7 @@
     if(BROWSER_ONLY_SENSITIVITY.has(sensitivity)&&await cloud()){
       const now=new Date().toISOString();const all=await browserGet('browserAnswers',{});
       const item={signature,question,value:String(value??'').trim(),kind,sensitivity,confirmed_at:now,source:'user_confirmed',storage:'browser',created_at:all[signature]?.created_at||now};
-      all[signature]=item;await chrome.storage.local.set({browserAnswers:all});return item;
+      all[signature]=item;await browserSet('browserAnswers',all);return item;
     }
     const d=await api('/v1/state/answers',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({signature,question,value:String(value??'').trim(),kind,sensitivity,confirmed_at:new Date().toISOString(),source:'user_confirmed'})});
@@ -94,7 +95,7 @@
   }
   async function deleteAnswer(signature){
     const all=await browserGet('browserAnswers',{});
-    if(all[signature]){delete all[signature];await chrome.storage.local.set({browserAnswers:all});if(await cloud())return {ok:true}}
+    if(all[signature]){delete all[signature];await browserSet('browserAnswers',all);if(await cloud())return {ok:true}}
     return api('/v1/state/answers/'+encodeURIComponent(signature),{method:'DELETE'});
   }
   // Saved referees (other people's details the user entered once and confirms before each use).
@@ -105,7 +106,7 @@
   async function saveReferees(referees){
     if(await cloud()){
       const clean=(referees||[]).filter(r=>r&&r.fields).slice(0,10);
-      await chrome.storage.local.set({browserReferees:clean});return clean;
+      await browserSet('browserReferees',clean);return clean;
     }
     const d=await api('/v1/state/referees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({referees})});
     return d.referees||[];

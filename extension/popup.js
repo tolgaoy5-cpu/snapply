@@ -21,6 +21,7 @@ const CARD_TEXT={
 };
 function cards(items){const root=byId('cards');root.replaceChildren();(items||[]).slice(0,20).forEach(x=>{const [title,hint]=CARD_TEXT[x.status]||CARD_TEXT[x.decision]||['Please check',x.reason||''];const d=document.createElement('div');d.className='card';const t=document.createElement('b');t.textContent=title;const l=document.createElement('div');l.textContent=String(x.label||x.question||'').replace(/\s+/g,' ').trim();const h=document.createElement('div');h.className='muted';h.textContent=hint;d.append(t,l,h);root.appendChild(d)})}
 async function profile(){
+  await window.JobCopilotAPI.ensureScope();
   let {masterProfile}=await chrome.storage.local.get('masterProfile');
   // The local backend owns the current CV/profile across extension versions.
   // A cached Chrome profile may be stale after a previous tab or version edits it.
@@ -29,6 +30,9 @@ async function profile(){
     if(state.master_profile&&Object.keys(state.master_profile).length){
       masterProfile=state.master_profile;
       await chrome.storage.local.set({masterProfile});
+    }else{
+      // The server has no profile for this account: do not keep showing an older cached one.
+      masterProfile=null;await chrome.storage.local.remove('masterProfile');
     }
   }catch(_){ /* Use the last local copy while the backend is unavailable. */ }
   const base=masterProfile||{};

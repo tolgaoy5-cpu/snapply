@@ -6,7 +6,7 @@ async function run(cloudMode){
   const store={},sent=[];
   const server={saved_answers:{'notice':{signature:'notice',value:'1 month',sensitivity:'normal'}},referees:[],application_memory:{}};
   global.chrome={storage:{local:{get:async k=>({[k]:store[k]}),set:async o=>Object.assign(store,o),remove:async k=>{delete store[k]}}}};
-  global.window={JobCopilotAPI:{isCloud:async()=>cloudMode,raw:async(p,o={})=>{sent.push([p,o.method||'GET',o.body||'']);
+  global.window={JobCopilotAPI:{isCloud:async()=>cloudMode,accountKey:async n=>cloudMode?n+":acct":n,raw:async(p,o={})=>{sent.push([p,o.method||'GET',o.body||'']);
     const body=p==='/v1/state'?server:p==='/v1/state/answers'?{item:JSON.parse(o.body)}:p==='/v1/state/referees'?{referees:JSON.parse(o.body).referees}:p.startsWith('/v1/state/memory')?{item:{value:'x'},application_memory:{}}:{ok:true};
     return {ok:true,json:async()=>body,text:async()=>''}}}};
   new Function(src)();
@@ -24,14 +24,14 @@ async function run(cloudMode){
   const posted=c.sent.filter(s=>s[1]==='POST').map(s=>s[0]+' '+s[2]).join('\n');
   assert(!/convictions|ethnicity|Jane|Doe|right_to_work/.test(posted),'sensitive data reached the server:\n'+posted);
   assert(/salary/.test(posted),'normal answer should be saved to the server');
-  assert.deepStrictEqual(Object.keys(c.store.browserAnswers).sort(),['convictions','ethnicity']);
+  assert.deepStrictEqual(Object.keys(c.store['browserAnswers:acct']).sort(),['convictions','ethnicity']);
   assert.strictEqual(c.refs[0].fields.surname,'Doe');
   assert.strictEqual(c.store.applicationMemory.right_to_work.value,'Yes');
   const sigs=c.answers.map(a=>a.signature).sort();
   assert.deepStrictEqual(sigs,['convictions','ethnicity','notice']);
   // Deleting a browser-only answer never calls the server.
   const before=c.sent.length;await window.JobCopilotMemory.deleteAnswer('convictions');
-  assert.strictEqual(c.sent.length,before);assert(!c.store.browserAnswers.convictions);
+  assert.strictEqual(c.sent.length,before);assert(!c.store['browserAnswers:acct'].convictions);
   const l=await run(false);
   const lposted=l.sent.filter(s=>s[1]==='POST').map(s=>s[0]+' '+s[2]).join('\n');
   assert(/convictions/.test(lposted)&&/Doe/.test(lposted)&&/right_to_work/.test(lposted),'local mode keeps using the backend');
