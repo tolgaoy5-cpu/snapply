@@ -1,7 +1,8 @@
 """Stripe subscriptions for the hosted mode, using Stripe's REST API directly (no SDK).
 
 Configuration (environment): STRIPE_SECRET_KEY, STRIPE_PRICE_ID (monthly, £9.99),
-STRIPE_PRICE_ID_YEARLY (£79), STRIPE_WEBHOOK_SECRET,
+STRIPE_PRICE_ID_YEARLY (£79), STRIPE_WEBHOOK_SECRET, SNAPPLY_LAUNCH_OFFER=on (50% off the first two
+monthly payments; the coupon is created in Stripe on first use),
 SNAPPLY_PUBLIC_URL (where Checkout returns to). Test-mode keys (sk_test_...) work unchanged.
 """
 from __future__ import annotations
@@ -29,12 +30,12 @@ def configured() -> bool:
     return bool(os.environ.get("STRIPE_SECRET_KEY") and os.environ.get("STRIPE_PRICE_ID"))
 
 
-def _post(path: str, fields: dict[str, str]) -> dict[str, Any]:
+def _post(path: str, fields: dict[str, str] | None = None, method: str = "POST") -> dict[str, Any]:
     key = os.environ.get("STRIPE_SECRET_KEY", "")
     if not key:
         raise BillingError("Payments are not configured yet")
-    req = urllib.request.Request(API + path, data=urllib.parse.urlencode(fields).encode(),
-                                 headers={"Authorization": f"Bearer {key}"}, method="POST")
+    data = urllib.parse.urlencode(fields).encode() if fields is not None else None
+    req = urllib.request.Request(API + path, data=data, headers={"Authorization": f"Bearer {key}"}, method=method)
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             return json.loads(resp.read())
@@ -44,6 +45,33 @@ def _post(path: str, fields: dict[str, str]) -> dict[str, Any]:
         except Exception:
             message = ""
         raise BillingError(message or f"Stripe error {e.code}") from None
+
+
+LAUNCH_COUPON = "snapply-launch-50-2m"
+LAUNCH_OFFER = {"percent_off": 50, "months": 2, "label": "Launch offer: 50% off your first 2 months"}
+_coupon_ready = False
+
+
+def launch_offer_on() -> bool:
+    return os.environ.get("SNAPPLY_LAUNCH_OFFER", "").strip().lower() in ("on", "1", "true")
+
+
+def _ensure_launch_coupon() -> str:
+    """Create the launch coupon once (fixed id, so it is never duplicated)."""
+    global _coupon_ready
+    if not _coupon_ready:
+        try:
+            _post(f"/coupons/{LAUNCH_COUPON}", method="GET")
+        except BillingError:
+            try:
+                _post("/coupons", {"id": LAUNCH_COUPON, "name": "Launch offer",
+                                   "percent_off": str(LAUNCH_OFFER["percent_off"]), "duration": "repeating",
+                                   "duration_in_months": str(LAUNCH_OFFER["months"])})
+            except BillingError as e:
+                if "already exists" not in str(e):
+                    raise
+        _coupon_ready = True
+    return LAUNCH_COUPON
 
 
 def _return_url() -> str:
@@ -67,10 +95,15 @@ def checkout_url(uid: str, interval: str = "month") -> str:
         "line_items[0][quantity]": "1",
         "client_reference_id": uid,
         "subscription_data[metadata][uid]": uid,
-        "allow_promotion_codes": "true",
         "success_url": _return_url() + "/thanks",
         "cancel_url": _return_url() + "/#pricing",
     }
+    # The launch discount applies to the monthly plan only, and only to a first subscription
+    # (Stripe does not allow a fixed discount and customer-entered promotion codes together).
+    if interval != "year" and launch_offer_on() and not account.get("stripe_customer"):
+        fields["discounts[0][coupon]"] = _ensure_launch_coupon()
+    else:
+        fields["allow_promotion_codes"] = "true"
     if account.get("stripe_customer"):
         fields["customer"] = account["stripe_customer"]
     elif account.get("email"):

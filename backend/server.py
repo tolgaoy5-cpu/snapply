@@ -280,7 +280,8 @@ def ai_status():
 def health():
     return {'ok':True,'version':'0.27.0','auth':'google' if accounts.cloud_mode() else 'none',
             'google_client_id':os.environ.get('GOOGLE_CLIENT_ID','').split(',')[0].strip() if accounts.cloud_mode() else '',
-            'billing':billing.configured()}
+            'billing':billing.configured(),
+            'launch_offer':billing.LAUNCH_OFFER if billing.launch_offer_on() else None}
 
 class GoogleSignIn(BaseModel):
     id_token:str=Field(min_length=20,max_length=8000)

@@ -107,9 +107,27 @@ with TemporaryDirectory() as td2:
     os.environ['JOB_COPILOT_DATA_DIR'] = td2
     os.environ.update({'STRIPE_SECRET_KEY': 'sk_test_x', 'STRIPE_PRICE_ID': 'price_month', 'STRIPE_PRICE_ID_YEARLY': 'price_year'})
     calls = []
-    billing._post = lambda path, fields: calls.append((path, fields)) or {'url': 'https://checkout.stripe.com/x'}
+    def fake_post(path, fields=None, method='POST'):
+        calls.append((path, fields, method))
+        if path.startswith('/coupons/'):
+            raise billing.BillingError('No such coupon')
+        return {'url': 'https://checkout.stripe.com/x'}
+    billing._post = fake_post
     uid = accounts.user_id_for('sub-c'); accounts.save_account(uid, {'email': 'c@example.com', 'plan': 'free'})
     billing.checkout_url(uid); billing.checkout_url(uid, 'year')
-    assert [f['line_items[0][price]'] for _, f in calls] == ['price_month', 'price_year']
-    assert calls[0][1]['client_reference_id'] == uid and calls[0][1]['customer_email'] == 'c@example.com'
+    sessions = [f for p, f, _ in calls if p == '/checkout/sessions']
+    assert [f['line_items[0][price]'] for f in sessions] == ['price_month', 'price_year']
+    assert sessions[0]['client_reference_id'] == uid and sessions[0]['customer_email'] == 'c@example.com'
+    assert 'discounts[0][coupon]' not in sessions[0] and sessions[0]['allow_promotion_codes'] == 'true'
+    # Launch offer: monthly first subscription gets the coupon (created once); yearly does not.
+    os.environ['SNAPPLY_LAUNCH_OFFER'] = 'on'; calls.clear()
+    billing.checkout_url(uid); billing.checkout_url(uid); billing.checkout_url(uid, 'year')
+    sessions = [f for p, f, _ in calls if p == '/checkout/sessions']
+    assert sessions[0]['discounts[0][coupon]'] == billing.LAUNCH_COUPON and 'allow_promotion_codes' not in sessions[0]
+    assert 'discounts[0][coupon]' not in sessions[2]
+    created = [f for p, f, m in calls if p == '/coupons']
+    assert len(created) == 1 and created[0]['percent_off'] == '50' and created[0]['duration_in_months'] == '2'
+    # A returning customer (already has a Stripe customer) pays full price.
+    accounts.set_plan(uid, 'free', customer='cus_old'); calls.clear(); billing.checkout_url(uid)
+    assert 'discounts[0][coupon]' not in [f for p, f, _ in calls if p == '/checkout/sessions'][0]
     print('checkout prices ok')

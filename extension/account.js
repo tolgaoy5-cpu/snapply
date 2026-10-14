@@ -22,9 +22,11 @@
     }
     let a;try{a=await API().account()}catch(e){b.append(line(e.message));return}
     const pro=a.plan==='pro';
+    const offer=!pro&&m.launch_offer;
     b.append(line(`${a.email} · ${pro?'Pro':'Free'} plan`,'acct-title'),
       line(`AI drafts this month: ${a.ai_used} of ${a.ai_limit}`),
-      ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:[button('Pro · £9.99/month',()=>openTab('/v1/billing/checkout',{interval:'month'}),'primary-small'),button('Pro · £79/year',()=>openTab('/v1/billing/checkout',{interval:'year'}))]),
+      ...(offer?[line('Launch offer: Pro for £4.99/month for your first 2 months, then £9.99/month. Cancel any time.','acct-offer')]:[]),
+      ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:[button(offer?'Pro · £4.99/month':'Pro · £9.99/month',()=>openTab('/v1/billing/checkout',{interval:'month'}),'primary-small'),button('Pro · £79/year',()=>openTab('/v1/billing/checkout',{interval:'year'}))]),
       button('Sign out',async()=>{await API().signOut();render()}),
       button('Delete account',async e=>{
         // Two-step confirmation inside the panel (no browser dialogs): first click arms, second deletes.
