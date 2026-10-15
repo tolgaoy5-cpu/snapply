@@ -6,6 +6,7 @@
   --radius:20px;--shadow:0 30px 80px rgba(17,24,39,.10),0 8px 24px rgba(17,24,39,.06);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
 img{max-width:100%;display:block}
