@@ -51,13 +51,16 @@
     const pro=account.plan==='pro';
     if(intent==='buy'&&!pro){status('Opening secure checkout…');location.href=(await api('/v1/billing/checkout',{interval})).url;return}
     $('#signinTitle').textContent=pro?'You are on Pro ✦':'You are on the Free plan';
-    const apps=account.applications_limit==null?'unlimited applications':`${account.applications_used} of ${account.applications_limit} applications`;
-    $('#gsi').innerHTML='';
-    const p=document.createElement('p');p.textContent=`${account.email} · ${apps} and ${account.ai_used} of ${account.ai_limit} AI drafts used this month.`;
-    const b=document.createElement('button');b.className='btn '+(pro?'btn-dark':'btn-brand');b.style.width='100%';
+    $('#signinIntro').hidden=true;$('#gsi').innerHTML='';$('#gsi').hidden=true;
+    const apps=account.applications_limit==null?'Unlimited applications':`${account.applications_used} of ${account.applications_limit} applications`;
+    const who=document.createElement('div');who.className='who';
+    const email=document.createElement('b');email.textContent=account.email;
+    const usage=document.createElement('span');usage.textContent=`${apps} · ${account.ai_used} of ${account.ai_limit} AI drafts this month`;
+    who.append(email,usage);
+    const b=document.createElement('button');b.className='btn '+(pro?'btn-dark':'btn-brand');
     b.textContent=pro?'Manage subscription':'Get Pro';
     b.onclick=async()=>{try{status('Opening…');location.href=(await api(pro?'/v1/billing/portal':'/v1/billing/checkout',pro?{}:{interval})).url}catch(e){status(e.message)}};
-    $('#gsi').append(p,b);status('');
+    $('#acct').replaceChildren(who,b);$('#acct').hidden=false;status('');
   }
 
   async function onCredential(resp){
@@ -68,7 +71,7 @@
   async function open(kind){
     intent=kind;const dlg=$('#signin');
     $('#signinTitle').textContent=kind==='buy'?(interval==='year'?'Get Snapply Pro — yearly':'Get Snapply Pro'):'Log in to Snapply';
-    status('');dlg.showModal();
+    status('');$('#signinIntro').hidden=false;$('#gsi').hidden=false;$('#acct').hidden=true;dlg.showModal();
     try{
       if(session()){try{await proceed();return}catch(_){setSession('')}}
       if(!clientId)clientId=(await api('/health')).google_client_id;
