@@ -10,11 +10,20 @@
   // Sticky nav border once the page scrolls.
   const nav=$('#nav');addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>8),{passive:true});
 
-  // Chrome Web Store links (beta: early access by email until the listing is approved).
+  // "Add to Chrome": the Chrome Web Store once the listing is live; until then, a short
+  // "almost here" note that takes an email address to send the install link to.
   $$('[data-store]').forEach(a=>{
-    if(STORE_LIVE){a.href=STORE_URL;a.target='_blank';a.rel='noopener'}
-    else{a.href='mailto:hello@snapply.co.uk?subject=Snapply%20beta%20access';a.textContent=a.textContent.replace('Add to Chrome','Get beta access')}
+    if(STORE_LIVE){a.href=STORE_URL;a.target='_blank';a.rel='noopener';return}
+    a.onclick=e=>{e.preventDefault();$('#notifyStatus').textContent='';$('#notify').showModal();$('#notifyEmail').focus()};
   });
+  $('#notifyForm').onsubmit=async e=>{
+    e.preventDefault();const st=$('#notifyStatus');st.textContent='Saving…';
+    try{
+      const r=await fetch(API+'/v1/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('#notifyEmail').value.trim()})});
+      if(!r.ok)throw new Error('Please check the email address.');
+      st.textContent="Thanks — we'll email you the install link as soon as it's live.";$('#notifyForm').hidden=true;
+    }catch(err){st.textContent=err.message}
+  };
 
   // Monthly / yearly prices.
   const PRICES={month:['£4.99<small> / month</small>','for your first 2 months, then £9.99/month. Cancel any time.'],
@@ -71,5 +80,5 @@
 
   $$('[data-action="buy"]').forEach(b=>b.onclick=()=>open('buy'));
   $$('[data-action="account"]').forEach(b=>b.onclick=e=>{e.preventDefault();open('account')});
-  $('[data-action="close"]').onclick=()=>$('#signin').close();
+  $$('[data-action="close"]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 })();

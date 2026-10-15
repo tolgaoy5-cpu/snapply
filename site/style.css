@@ -49,7 +49,7 @@ h1,h2,h3{margin:0}
 .logos{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px;margin-top:40px;color:var(--muted);font-weight:600;font-size:15px}
 .logos span:first-child{font-weight:500;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
 .shot{border-radius:24px;box-shadow:var(--shadow);background:#fff;overflow:hidden}
-.hero .shot{transform:rotate(-1.2deg)}
+.hero .shot{transform:none}
 
 /* Sections */
 section{padding:110px 0}

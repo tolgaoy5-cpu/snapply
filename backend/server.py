@@ -25,7 +25,7 @@ app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_OR
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
 
 # Routes that work without a session in cloud mode.
-PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook'}
+PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist'}
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
@@ -308,6 +308,15 @@ def usage_application(r:ApplicationUsage):
         return {'ok':True,**accounts.record_application(accounts.current_uid.get(),r.url)}
     except accounts.QuotaError as e:
         raise HTTPException(status_code=402,detail=str(e))
+
+class WaitlistRequest(BaseModel):
+    email:str=Field(min_length=5,max_length=254,pattern=r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+@app.post('/v1/waitlist')
+def waitlist(r:WaitlistRequest):
+    # People who want the Chrome Web Store link when it goes live (public, no sign-in).
+    accounts.add_to_waitlist(r.email)
+    return {'ok':True}
 
 @app.get('/v1/me')
 def me():

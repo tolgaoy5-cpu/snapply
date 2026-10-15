@@ -61,5 +61,11 @@ r = c.post('/v1/usage/application', json={'url': 'https://jobs.lever.co/acme/job
 assert r.status_code == 402
 r = c.post('/v1/usage/application', json={'url': 'https://jobs.lever.co/acme/job-99/apply'}, headers=H(pro))
 assert r.status_code == 200 and r.json()['applications_limit'] is None
+# Waitlist: public, validates the address, stores each address once.
+assert c.post('/v1/waitlist', json={'email': 'not-an-email'}).status_code == 422
+assert c.post('/v1/waitlist', json={'email': 'Fan@Example.com'}, headers={'Origin': 'https://snapply.co.uk'}).status_code == 200
+assert c.post('/v1/waitlist', json={'email': 'fan@example.com'}).status_code == 200
+import json as _j
+assert [e['email'] for e in _j.loads((Path(td2.name) / 'waitlist.json').read_text())] == ['fan@example.com']
 td2.cleanup()
 print('pro gates ok')

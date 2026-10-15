@@ -30,7 +30,7 @@
 <div class="hero">
   <div class="wrap">
     <div>
-      <span class="pill"><b>BETA</b> Now open for UK job seekers</span>
+      <span class="pill"><b>NEW</b> Built for UK job seekers</span>
       <h1 class="display">Job applications, filled in a <em>snap.</em></h1>
       <p class="lead">Snapply fills every page of an application from your CV, remembers each answer you give once, and drafts cover letters from your real experience. You review — you submit.</p>
       <div class="cta">
@@ -181,6 +181,19 @@
     <div class="legal">© 2026 Snapply. Operated by Tolga Oy, United Kingdom.</div>
   </div>
 </footer>
+
+<dialog id="notify">
+  <button class="close" aria-label="Close" data-action="close">×</button>
+  <h3>Almost here</h3>
+  <p>Snapply is being checked by the Chrome Web Store and will be ready to install in a few days. Leave your email and we'll send you the install link as soon as it's live.</p>
+  <form id="notifyForm" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+    <label for="notifyEmail" style="position:absolute;left:-9999px">Email</label>
+    <input id="notifyEmail" type="email" required placeholder="you@example.com" autocomplete="email" style="flex:1 1 200px;font:16px var(--sans);padding:13px 16px;border:1px solid var(--line);border-radius:999px">
+    <button class="btn btn-dark" type="submit">Notify me</button>
+  </form>
+  <p class="status" id="notifyStatus" role="status" aria-live="polite"></p>
+  <p class="fine" style="margin-top:14px">We only use your email to send the link. See our <a href="privacy.html">privacy policy</a>.</p>
+</dialog>
 
 <dialog id="signin">
   <button class="close" aria-label="Close" data-action="close">×</button>

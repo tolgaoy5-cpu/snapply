@@ -292,3 +292,18 @@ def delete_user(uid: str) -> None:
         shutil.rmtree(user_dir(uid), ignore_errors=True)
         if customer:
             (data_root() / "stripe_customers" / f"{_safe(customer)}.json").unlink(missing_ok=True)
+
+
+def add_to_waitlist(email: str) -> int:
+    """Remember an email address that asked to be told when Snapply is in the Chrome Web Store."""
+    path = data_root() / "waitlist.json"
+    with _LOCK:
+        try:
+            entries = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            entries = []
+        email = email.strip().lower()
+        if all(e.get("email") != email for e in entries) and len(entries) < 50000:
+            entries.append({"email": email, "added_at": datetime.now(timezone.utc).isoformat()})
+            _write_json(path, entries)  # type: ignore[arg-type]
+        return len(entries)

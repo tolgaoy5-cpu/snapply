@@ -3,6 +3,7 @@
     fly ssh console --app snapply-api -C "python admin.py list"
     fly ssh console --app snapply-api -C "python admin.py grant-pro someone@gmail.com"
     fly ssh console --app snapply-api -C "python admin.py revoke-pro someone@gmail.com"
+    fly ssh console --app snapply-api -C "python admin.py waitlist"
 
 grant-pro gives a complimentary Pro plan (no Stripe subscription). The person must have signed in
 to Snapply once so that their account exists.
@@ -34,6 +35,15 @@ def _find(email: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) >= 2 and argv[1] == "waitlist":
+        try:
+            entries = json.loads((accounts.data_root() / "waitlist.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            entries = []
+        for e in entries:
+            print(e["email"], e.get("added_at", "")[:10])
+        print(f"{len(entries)} on the waitlist")
+        return 0
     if len(argv) < 2 or argv[1] not in ("list", "grant-pro", "revoke-pro"):
         print(__doc__)
         return 2
