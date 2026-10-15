@@ -42,8 +42,8 @@ PRIVATE BY DESIGN
 • Delete your account, CV and answers with one click
 
 PLANS
-Free: unlimited form filling, remembered answers, 5 AI drafts a month.
-Pro: 300 AI drafts a month and cover letters for every application — £9.99/month (launch offer: £4.99 for the first 2 months) or £79/year.
+Free: 5 applications a month, remembered answers, 3 AI drafts a month.
+Pro: unlimited applications, 300 AI drafts a month and cover letters for every application — £9.99/month (launch offer: £4.99 for the first 2 months) or £79/year.
 
 Website: https://snapply.co.uk · Support: hello@snapply.co.uk
 

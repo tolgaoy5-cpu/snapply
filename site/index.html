@@ -3,105 +3,194 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Snapply — Snap. Apply. Done.</title>
-<meta name="description" content="Snapply fills job applications from your CV, remembers your answers and drafts honest cover letters. You review and submit.">
+<title>Snapply — Job applications, filled in a snap</title>
+<meta name="description" content="Snapply fills job applications from your CV, remembers your answers and drafts honest cover letters. Workday, Greenhouse, NHS Jobs and more. You review and submit.">
+<meta property="og:title" content="Snapply — Job applications, filled in a snap">
+<meta property="og:description" content="Fill job applications from your CV in one click. Honest AI, private by design.">
+<meta property="og:image" content="https://snapply.co.uk/img/fill.jpg">
 <link rel="icon" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="wrap">
-  <nav>
-    <a class="brand" href="./"><img src="logo.png" alt="">Snapply</a>
-    <div class="links"><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#pricing">Pricing</a><a class="btn" href="#get">Add to Chrome</a></div>
-  </nav>
 
-  <header class="hero">
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="logo.png" alt="">Snapply</a>
+    <nav class="links"><a href="#how">How it works</a><a href="#features">Features</a><a href="#privacy">Privacy</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+    <div class="actions">
+      <a class="btn btn-ghost btn-sm" href="#pricing" data-action="account">Log in</a>
+      <a class="btn btn-dark btn-sm" data-store href="#pricing">Add to Chrome</a>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
     <div>
-      <span class="eyebrow">✦ For Workday, Greenhouse, NHS Jobs (TRAC) and more</span>
-      <h1>Snap. Apply. <span class="grad">Done.</span></h1>
-      <p class="lead">Snapply fills job applications from your CV, remembers every answer you give once, and drafts cover letters from your real experience. You stay in control: you review, you submit.</p>
-      <div class="cta" id="get"><a class="btn" href="#pricing">Add to Chrome — free</a><a class="btn ghost" href="#how">See how it works</a></div>
-      <div class="fine">Free plan forever. No card needed.</div>
-      <div class="ats"><span>Workday</span><span>Greenhouse</span><span>TRAC · NHS</span><span>Lever</span><span>Ashby</span><span>CIPHR</span></div>
+      <span class="pill"><b>BETA</b> Now open for UK job seekers</span>
+      <h1 class="display">Job applications, filled in a <em>snap.</em></h1>
+      <p class="lead">Snapply fills every page of an application from your CV, remembers each answer you give once, and drafts cover letters from your real experience. You review — you submit.</p>
+      <div class="cta">
+        <a class="btn btn-dark" data-store href="#pricing">Add to Chrome — it's free</a>
+        <a class="btn btn-ghost" href="#how">See how it works</a>
+      </div>
+      <div class="fine">Free for 5 applications a month. No card needed.</div>
+      <div class="logos"><span>Works on</span><span>Workday</span><span>Greenhouse</span><span>NHS Jobs · TRAC</span><span>Lever</span><span>Ashby</span><span>CIPHR</span></div>
     </div>
-    <div class="mock" aria-label="Snapply panel preview">
-      <div class="bar"><img src="logo.png" alt=""><div><b>Snapply</b><small>Workday detected · You review and submit</small></div></div>
-      <div class="go">Fill this page</div>
-      <div class="row">Work experience · 4 roles <em>✓ Filled</em></div>
-      <div class="row">Education · 2 entries <em>✓ Filled</em></div>
-      <div class="row">Dates confirmed by Workday <em>✓ 11/11</em></div>
-      <div class="ask"><div class="q">What is your notice period?</div><div class="chips"><span>Immediate</span><span class="on">1 month</span><span>3 months</span></div><div class="fine" style="margin-top:6px">Remembered — filled automatically next time.</div></div>
-    </div>
-  </header>
+    <img class="shot" src="img/fill.jpg" alt="Snapply panel filling a Workday experience page" width="690" height="722">
+  </div>
 </div>
 
-<section id="how"><div class="wrap">
-  <h2>Your CV in, applications out</h2>
-  <p class="sub">The same twenty questions on every site. Snapply answers the ones it knows and asks you only once for the rest.</p>
-  <div class="steps">
-    <div class="card"><h3>Upload your CV once</h3><p>PDF or Word. Snapply builds your profile: roles, dates, education, skills. You check it before anything is filled.</p></div>
-    <div class="card"><h3>Press “Fill this page”</h3><p>Every work and education row, dates, languages, contact details — committed so the site actually accepts them.</p></div>
-    <div class="card"><h3>Answer once, reuse forever</h3><p>New question? Answer it in the panel. A reworded version on another site is filled for you next time.</p></div>
-  </div>
-</div></section>
-
-<section><div class="wrap">
-  <h2>Honest AI, built on your CV</h2>
-  <p class="sub">Most AI writers invent achievements. Snapply checks every sentence against your CV before you see it.</p>
-  <div class="features">
-    <div class="card"><h3>Cover letters in seconds</h3><p>Matched to the job’s requirements, written only from experience you actually have, attached to the application as PDF.</p></div>
-    <div class="card"><h3>Grounding check</h3><p>Sentences that are not supported by your CV are rewritten or removed. Numbers and qualifications must appear in your CV word for word.</p></div>
-    <div class="card"><h3>Written answers</h3><p>“Why do you want this role?” and supporting statements drafted from your evidence — you edit and approve.</p></div>
-    <div class="card"><h3>Never submits for you</h3><p>Snapply fills and checks. The final submit button is always yours.</p></div>
-  </div>
-</div></section>
-
-<section id="privacy"><div class="wrap"><div class="trust">
-  <h2>Private by design</h2>
-  <p class="sub">Job applications ask for your most sensitive details. Snapply treats them that way.</p>
-  <ul>
-    <li><b>Legal and personal answers stay in your browser.</b> Right to work, convictions, ethnicity, disability, date of birth — never stored on our servers.</li>
-    <li><b>Asked every time.</b> Sensitive answers are suggested, never filled silently.</li>
-    <li><b>Referees are other people’s data.</b> Kept in your browser and filled only after you confirm.</li>
-    <li><b>Delete everything, any time.</b> One button removes your account, CV and answers.</li>
-    <li><b>No selling, no ads.</b> Your data is used to fill your applications, nothing else.</li>
-    <li><b>UK-hosted.</b> Servers in London. UK GDPR applies.</li>
-  </ul>
-</div></div></section>
-
-<section id="pricing"><div class="wrap">
-  <h2>Simple pricing</h2>
-  <p class="sub">Filling and remembering are free. Pay only if you want more AI drafting.</p>
-  <div class="pricing">
-    <div class="price">
-      <h3>Free</h3>
-      <div class="amt">£0</div><div class="fine">Forever</div>
-      <ul><li>Unlimited form filling</li><li>Remembered answers</li><li>Workday, Greenhouse, TRAC and more</li><li>5 AI drafts a month</li></ul>
-      <a class="btn ghost" href="#get">Add to Chrome</a>
-    </div>
-    <div class="price pro">
-      <h3>Pro <span class="tag">Launch offer</span></h3>
-      <div class="amt">£4.99<small> / month</small></div><div class="fine">for your first 2 months, then £9.99/month · or £79 a year</div>
-      <ul><li>Everything in Free</li><li>300 AI drafts a month</li><li>Cover letters for every application</li><li>Cancel any time</li></ul>
-      <a class="btn" href="#get">Start with Free, upgrade in the app</a>
+<section id="how">
+  <div class="wrap center">
+    <div class="eyebrow">How it works</div>
+    <h2 class="h2">Your CV in. <em>Applications out.</em></h2>
+    <p class="sub">The same twenty questions on every site. Snapply answers the ones it knows and asks you only once for the rest.</p>
+    <div class="steps" style="text-align:left">
+      <div class="step"><h3>Upload your CV once</h3><p>PDF or Word. Snapply builds your profile — roles, dates, education, skills — and you check it before anything is filled.</p></div>
+      <div class="step"><h3>Press “Fill this page”</h3><p>Work history, education, dates, languages and contact details, committed so the site actually accepts them.</p></div>
+      <div class="step"><h3>Review and submit</h3><p>Check every page, answer anything new once, and press submit yourself. Snapply never submits for you.</p></div>
     </div>
   </div>
-</div></section>
+</section>
 
-<section class="faq"><div class="wrap">
-  <h2>Questions</h2>
-  <details><summary>Does Snapply submit applications for me?</summary><p>No. It fills and checks the form; you review every page and press submit yourself.</p></details>
-  <details><summary>Will it make things up?</summary><p>No. Facts come from your CV. If something is not in your CV, Snapply asks you instead of guessing, and AI drafts are checked against your CV before you see them.</p></details>
-  <details><summary>Which sites does it work on?</summary><p>Workday, Greenhouse and NHS Jobs / TRAC are fully supported; Lever, Ashby and CIPHR are detected and partly supported, with more coming.</p></details>
-  <details><summary>Does it work on a tablet or phone?</summary><p>Not yet — Snapply runs in Chrome on a computer. An iPad version is planned.</p></details>
-  <details><summary>How do I cancel?</summary><p>In the Snapply panel: Manage subscription. You keep Pro until the end of the period you paid for.</p></details>
-</div></section>
+<section id="features" style="padding-top:20px">
+  <div class="wrap">
+    <div class="feature">
+      <div class="text">
+        <div class="eyebrow">Remembers for you</div>
+        <h2 class="h2">Answer once. <em>Reused everywhere.</em></h2>
+        <p class="sub">A new question appears in the Snapply panel with the site's own options. Answer it once — the same or a reworded question on any other site is filled for you next time.</p>
+        <ul>
+          <li>Notice period, salary, relocation and dozens more, remembered</li>
+          <li>Legal and personal questions are suggested, never filled silently</li>
+          <li>Referees entered once and filled only after you confirm</li>
+        </ul>
+      </div>
+      <img class="shot" src="img/remember.jpg" alt="Snapply remembering application answers" width="690" height="722" loading="lazy">
+    </div>
+    <div class="feature flip">
+      <div class="text">
+        <div class="eyebrow">Honest AI</div>
+        <h2 class="h2">Cover letters built on <em>your real CV.</em></h2>
+        <p class="sub">Most AI writers invent achievements. Snapply matches the job's requirements to experience you actually have, and checks every sentence before you see it.</p>
+        <ul>
+          <li>Unsupported claims are rewritten or removed</li>
+          <li>Numbers and qualifications must appear in your CV word for word</li>
+          <li>Letters attached to the application as PDF</li>
+        </ul>
+      </div>
+      <img class="shot" src="img/ai.jpg" alt="Snapply drafting a cover letter from CV evidence" width="690" height="722" loading="lazy">
+    </div>
+  </div>
+</section>
 
-<footer><div class="wrap">
-  <span>© 2026 Snapply</span>
-  <span><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="mailto:hello@snapply.co.uk">Contact</a></span>
-</div></footer>
+<section id="privacy" style="padding-top:20px">
+  <div class="wrap">
+    <div class="dark">
+      <div class="eyebrow" style="color:#f9a8d4">Private by design</div>
+      <h2 class="h2">Your most sensitive answers <em style="color:#f9a8d4">stay with you.</em></h2>
+      <p class="sub">Job applications ask for things you would never post online. Snapply treats them that way.</p>
+      <div class="grid4">
+        <div><b>Stays in your browser</b><p>Right to work, convictions, ethnicity, disability, date of birth and referee details never reach our servers.</p></div>
+        <div><b>Never submits for you</b><p>Snapply fills and checks. The final submit button is always yours.</p></div>
+        <div><b>No invented facts</b><p>Anything that is not in your CV is asked, never guessed.</p></div>
+        <div><b>Delete everything</b><p>One button removes your account, CV and saved answers. UK-hosted, UK GDPR.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" style="padding-top:20px">
+  <div class="wrap center">
+    <div class="eyebrow">Pricing</div>
+    <h2 class="h2">Start free. <em>Go Pro</em> when you're applying in earnest.</h2>
+    <div class="toggle" role="tablist" aria-label="Billing period">
+      <button class="on" data-interval="month" role="tab" aria-selected="true">Monthly</button>
+      <button data-interval="year" role="tab" aria-selected="false">Yearly<small>save 34%</small></button>
+    </div>
+    <div class="plans">
+      <div class="plan">
+        <h3>Free</h3>
+        <div class="desc">To try Snapply on your next applications.</div>
+        <div class="price">£0</div>
+        <div class="price-note">Forever. No card needed.</div>
+        <ul>
+          <li>5 applications filled a month</li>
+          <li>Remembered answers on every site</li>
+          <li>3 AI drafts a month</li>
+          <li class="no">Cover letters</li>
+          <li class="no">Unlimited applications</li>
+        </ul>
+        <a class="btn btn-ghost" data-store href="#pricing">Add to Chrome</a>
+      </div>
+      <div class="plan pro">
+        <span class="tag">Launch offer</span>
+        <h3>Pro</h3>
+        <div class="desc">For active job seekers.</div>
+        <div class="price" id="proPrice">£4.99<small> / month</small></div>
+        <div class="price-note" id="proNote">for your first 2 months, then £9.99/month. Cancel any time.</div>
+        <ul>
+          <li>Unlimited applications</li>
+          <li>Remembered answers on every site</li>
+          <li>300 AI drafts a month</li>
+          <li>Cover letters for every application</li>
+          <li>Priority support</li>
+        </ul>
+        <button class="btn btn-brand" data-action="buy">Get Pro</button>
+        <div class="status" id="buyStatus" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="fine" style="margin-top:22px">Prices include any applicable VAT. Subscriptions renew automatically until cancelled. <a href="terms.html">Terms</a></p>
+  </div>
+</section>
+
+<section id="faq" style="padding-top:20px">
+  <div class="wrap">
+    <div class="center"><div class="eyebrow">FAQ</div><h2 class="h2">Questions, <em>answered.</em></h2></div>
+    <div class="faq">
+      <details><summary>Does Snapply submit applications for me?</summary><p>No. It fills and checks each page; you review everything and press submit yourself.</p></details>
+      <details><summary>Will it make things up?</summary><p>No. Facts come from your CV. If something is not in your CV, Snapply asks you instead of guessing, and AI drafts are checked against your CV before you see them.</p></details>
+      <details><summary>What counts as an application?</summary><p>One job you apply to. All the pages and steps of that application count once, however many times you press “Fill this page”.</p></details>
+      <details><summary>Which sites does it work on?</summary><p>Workday, Greenhouse and NHS Jobs / TRAC are fully supported. Lever, Ashby and CIPHR are detected and partly supported, with more coming.</p></details>
+      <details><summary>Do I buy Pro here or in the extension?</summary><p>Either. Press “Get Pro” above and sign in with the same Google account you use in the extension — your plan appears there straight away.</p></details>
+      <details><summary>Does it work on a tablet or phone?</summary><p>Not yet — Snapply runs in Chrome on a computer. An iPad version is planned.</p></details>
+      <details><summary>How do I cancel?</summary><p>From the Snapply panel (Manage subscription) or by signing in here. Pro stays active until the end of the period you paid for.</p></details>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="final">
+      <h2 class="h2">Your next application, <em>done in minutes.</em></h2>
+      <p class="sub">Install Snapply, upload your CV, and press “Fill this page”.</p>
+      <div class="cta" style="justify-content:center"><a class="btn btn-dark" data-store href="#pricing">Add to Chrome — it's free</a></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div><a class="brand" href="./" style="display:flex;margin:0 0 12px"><img src="logo.png" alt="">Snapply</a><span>Job applications, filled in a snap.</span></div>
+    <div><h4>Product</h4><a href="#how">How it works</a><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></div>
+    <div><h4>Company</h4><a href="mailto:hello@snapply.co.uk">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
+    <div class="legal">© 2026 Snapply. Operated by Tolga Oy, United Kingdom.</div>
+  </div>
+</footer>
+
+<dialog id="signin">
+  <button class="close" aria-label="Close" data-action="close">×</button>
+  <h3 id="signinTitle">Get Snapply Pro</h3>
+  <p>Sign in with the Google account you use (or will use) in the Snapply extension. Your plan follows your account.</p>
+  <div id="gsi"></div>
+  <p class="status" id="signinStatus" role="status" aria-live="polite"></p>
+</dialog>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>

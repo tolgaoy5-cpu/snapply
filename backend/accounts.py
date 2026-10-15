@@ -29,7 +29,7 @@ current_uid: contextvars.ContextVar[str | None] = contextvars.ContextVar("curren
 SESSION_DAYS = 30
 PLANS = {
     # AI drafts (answers + cover letters) per calendar month.
-    "free": int(os.environ.get("SNAPPLY_FREE_AI_PER_MONTH", "5")),
+    "free": int(os.environ.get("SNAPPLY_FREE_AI_PER_MONTH", "3")),
     "pro": int(os.environ.get("SNAPPLY_PRO_AI_PER_MONTH", "300")),
 }
 
@@ -171,6 +171,60 @@ def _month() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
+# Applications filled per calendar month (None = unlimited).
+APPLICATION_LIMITS: dict[str, int | None] = {
+    "free": int(os.environ.get("SNAPPLY_FREE_APPLICATIONS_PER_MONTH", "5")),
+    "pro": None,
+}
+
+
+def application_key(url: str) -> str:
+    """One key per job application, so the several pages/steps of one application count once.
+
+    Workday steps share the path up to the job id (".../job/<location>/<title>_<id>/apply/..."),
+    Greenhouse/Lever/Ashby share the path up to the job id, TRAC uses one application id.
+    """
+    parsed = urllib.parse.urlsplit(url.strip())
+    host = (parsed.hostname or "").lower()
+    path = parsed.path.rstrip("/")
+    query = urllib.parse.parse_qs(parsed.query)
+    for marker in ("/apply", "/application", "/applyManually", "/autofillWithResume"):
+        if marker.lower() in path.lower():
+            path = path[: path.lower().index(marker.lower())]
+            break
+    job = (query.get("gh_jid") or query.get("jobId") or query.get("job") or query.get("vacancy_id") or [""])[0]
+    return f"{host}{path}?{job}" if job else f"{host}{path}"
+
+
+def record_application(uid: str | None, url: str) -> dict[str, Any]:
+    """Count a job application against the monthly allowance (no-op in local mode).
+
+    Returns the usage; raises QuotaError when a new application would exceed the plan's limit.
+    The same application (any of its pages) is only counted once per month.
+    """
+    if uid is None:
+        return {"counted": False, "applications_used": 0, "applications_limit": None}
+    key = application_key(url)
+    if not key:
+        raise QuotaError("This page has no address Snapply can count.")
+    with _LOCK:
+        account = load_account(uid)
+        usage = account.setdefault("application_usage", {})
+        month = _month()
+        seen = usage.setdefault(month, [])
+        limit = APPLICATION_LIMITS[plan_of(account)]
+        new = key not in seen
+        if new and limit is not None and len(seen) >= limit:
+            raise QuotaError(f"You have used your {limit} free applications this month. "
+                             "Upgrade to Pro for unlimited applications.")
+        if new:
+            seen.append(key)
+            for old in sorted(usage)[:-3]:
+                usage.pop(old, None)
+            save_account(uid, account)
+        return {"counted": new, "applications_used": len(seen), "applications_limit": limit}
+
+
 def plan_of(account: dict[str, Any]) -> str:
     plan = account.get("plan")
     return plan if plan in PLANS else "free"
@@ -180,8 +234,10 @@ def public_account(uid: str) -> dict[str, Any]:
     account = load_account(uid)
     plan = plan_of(account)
     used = int((account.get("ai_usage") or {}).get(_month(), 0))
+    apps = len((account.get("application_usage") or {}).get(_month(), []))
     return {"email": account.get("email", ""), "name": account.get("name", ""), "plan": plan,
-            "ai_used": used, "ai_limit": PLANS[plan], "subscription_status": account.get("subscription_status", "")}
+            "ai_used": used, "ai_limit": PLANS[plan], "applications_used": apps,
+            "applications_limit": APPLICATION_LIMITS[plan], "subscription_status": account.get("subscription_status", "")}
 
 
 def consume_ai(uid: str | None, units: int = 1) -> None:

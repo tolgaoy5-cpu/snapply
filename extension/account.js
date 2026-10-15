@@ -24,8 +24,9 @@
     const pro=a.plan==='pro';
     const offer=!pro&&m.launch_offer;
     b.append(line(`${a.email} · ${pro?'Pro':'Free'} plan`,'acct-title'),
+      line(a.applications_limit==null?`Applications this month: ${a.applications_used||0} (unlimited)`:`Applications this month: ${a.applications_used||0} of ${a.applications_limit}`),
       line(`AI drafts this month: ${a.ai_used} of ${a.ai_limit}`),
-      ...(offer?[line('Launch offer: Pro for £4.99/month for your first 2 months, then £9.99/month. Cancel any time.','acct-offer')]:[]),
+      ...(offer?[line('Pro: unlimited applications, 300 AI drafts and cover letters. Launch offer: £4.99/month for your first 2 months, then £9.99/month.','acct-offer')]:[]),
       ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:[button(offer?'Pro · £4.99/month':'Pro · £9.99/month',()=>openTab('/v1/billing/checkout',{interval:'month'}),'primary-small'),button('Pro · £79/year',()=>openTab('/v1/billing/checkout',{interval:'year'}))]),
       button('Sign out',async()=>{await API().signOut();render()}),
       button('Delete account',async e=>{

@@ -679,3 +679,25 @@ send('ATS_DETECT').then(d=>{
 // Developer overlay on pages is off unless switched on here.
 chrome.storage.local.get('showDebugOverlay').then(x=>{byId('debugOverlayToggle').checked=!!x.showDebugOverlay}).catch(()=>{});
 byId('debugOverlayToggle').onchange=e=>chrome.storage.local.set({showDebugOverlay:e.target.checked});
+
+// Monthly application allowance (hosted service only): every fill action first registers the
+// current application; all pages of one application count once. Local mode is never limited.
+async function allowApplication(){
+  try{
+    if(!await window.JobCopilotAPI.isCloud())return true;
+    const url=(await active())?.url||'';
+    if(!/^https?:/.test(url))return true;
+    await window.JobCopilotAPI.post('/v1/usage/application',{url});
+    window.SnapplyAccount?.render();
+    return true;
+  }catch(e){
+    const s=byId('summary');
+    s.textContent=e.status===402?`${e.message} Open the Snapply account card above to upgrade.`:`Could not check your plan: ${e.message}`;
+    s.scrollIntoView({behavior:'smooth',block:'center'});
+    return false;
+  }
+}
+['fillAllSafe','fill','repeatFill','workdayBulkFill','workdayLanguageFill','tracEducationFill','tracEmployerFill'].forEach(id=>{
+  const b=byId(id);if(!b||typeof b.onclick!=='function')return;
+  const run=b.onclick;b.onclick=async e=>{if(await allowApplication())return run.call(b,e)};
+});

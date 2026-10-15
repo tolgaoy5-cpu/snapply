@@ -16,12 +16,12 @@ from cv_import import import_cv
 from profile_review import review_items, resolve_profile
 from state_store import load_state, set_master_profile, set_memory_item, replace_memory, upsert_saved_answer, delete_saved_answer, set_referees, save_cv, get_saved_cv_meta, get_saved_cv_bytes, forget_saved_cv
 from cover_letter import generate as generate_cover_letter, render as render_cover_letter
-from origin_policy import EXTENSION_ORIGIN, origin_allowed
+from origin_policy import ALLOWED_ORIGIN, origin_allowed
 import accounts
 import billing
 
 app=FastAPI(title='Snapply Core API',version='0.27.0')
-app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=EXTENSION_ORIGIN,
+app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_ORIGIN,
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
 
 # Routes that work without a session in cloud mode.
@@ -81,6 +81,9 @@ class CoverLetterRenderRequest(BaseModel):
 
 @app.post('/v1/cover-letter/generate')
 def cover_letter_generate(r:CoverLetterRequest):
+    uid=accounts.current_uid.get()
+    if uid is not None and accounts.plan_of(accounts.load_account(uid))!='pro':
+        raise HTTPException(status_code=402,detail='Cover letters are part of Snapply Pro. Upgrade to Pro to generate them.')
     profile=_refresh_profile_from_saved_cv_if_needed().get('master_profile') or {}
     _consume_ai()
     try:
@@ -295,6 +298,16 @@ def auth_google(r:GoogleSignIn):
     except accounts.AuthError as e:
         raise HTTPException(status_code=401,detail=str(e))
     return {'ok':True,'session':token,'account':account}
+
+class ApplicationUsage(BaseModel):
+    url:str=Field(min_length=8,max_length=4000)
+
+@app.post('/v1/usage/application')
+def usage_application(r:ApplicationUsage):
+    try:
+        return {'ok':True,**accounts.record_application(accounts.current_uid.get(),r.url)}
+    except accounts.QuotaError as e:
+        raise HTTPException(status_code=402,detail=str(e))
 
 @app.get('/v1/me')
 def me():
