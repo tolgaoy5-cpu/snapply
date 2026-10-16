@@ -221,7 +221,20 @@
         if(!r)return {ok:false,reason:'That option is not offered here.'};
         r.click();
       }else if(c.control==='aria_radio'||c.control==='aria_checkbox'){
-        const want=c.control==='aria_radio'?[wanted]:String(wanted).split(/\s*,\s*/);
+        // Several ticked boxes are saved as "A, B", but option texts can contain commas themselves:
+        // pick out whole option labels (longest first) instead of splitting on commas.
+        let want=[wanted];
+        if(c.control==='aria_checkbox'&&!c.options.some(x=>norm(ariaText(x))===norm(wanted))){
+          let rest=norm(wanted);want=[];
+          for(const label of c.options.map(ariaText).sort((x,y)=>y.length-x.length)){
+            const n=norm(label);if(n&&rest.includes(n)){want.push(label);rest=rest.replace(n,' ')}
+          }
+          if(!want.length||rest.replace(/[\s,]+/g,'').length)return {ok:false,reason:`“${wanted}” is not offered here.`};
+        }
+        // The answer describes the whole group: untick boxes that are not part of it.
+        if(c.control==='aria_checkbox')for(const o of c.options){
+          if(ariaChecked(o)&&!want.some(w=>norm(ariaText(o))===norm(w))){o.click();if(ariaChecked(o)){const inp=o.querySelector('input');if(inp){inp.click();if(inp.checked){inp.checked=false;inp.dispatchEvent(new Event('change',{bubbles:true}))}}}}
+        }
         for(const w of want){
           const o=c.options.find(x=>norm(ariaText(x))===norm(w));
           if(!o)return {ok:false,reason:`“${w}” is not offered here.`};
