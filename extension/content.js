@@ -25,6 +25,8 @@ function canonical(label,el=null){
   if(id==='first_name'||name==='first_name'||ac==='given-name') return 'first_name';
   if(id==='last_name'||name==='last_name'||ac==='family-name') return 'last_name';
   if(id==='email'||name==='email'||ac==='email') return 'email';
+  // Second phone numbers (alternative/home/other) are optional: never copy the main number into them.
+  if(/\b(?:alternative|alternate|secondary|additional|other|home|evening|daytime|work|landline)\b.{0,20}\b(?:phone|telephone|tel|number|mobile)\b/i.test(text)||/phone__home|phone_home|alt(?:ernative)?_?phone|secondary_?phone/i.test(id+' '+name)) return 'phone_secondary';
   // A region/county list often reuses autocomplete="country-name"; it is not the country.
   if(/(^|_)(sub)?option_country$|region|county/.test(id+' '+name)||/^region\b|^county\b/i.test(text)) return 'region';
   if(ac==='tel-country-code'||/country-?code.*phone/.test(id+' '+name)) return 'phone_country_code';

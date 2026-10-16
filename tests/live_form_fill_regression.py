@@ -48,6 +48,8 @@ for k, want in expected.items():
     assert v.get(k) == want, (k, v.get(k), want)
 # Legal and job-specific questions are left for the user; the source question is not mistaken for a job title.
 assert v['custom_question_406_9'] == '' and v['custom_question_566_24'] == ''
+# The optional second phone stays empty (a number without its country code fails the site's validation).
+assert v['phone-number_phone__home__6'] == '' and v['country-code_phone__home__6'] == ''
 source = [x['key'] for x in r['fill']['results'] if x['label'].startswith('Please tell us where you heard')]
 assert source == ['application_source'], source
 assert r['ats'] == 'TALENTLINK', r['ats']
