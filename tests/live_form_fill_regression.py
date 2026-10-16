@@ -27,7 +27,10 @@ storage:{{local:{{get:async()=>({{}}),set:async()=>{{}},remove:async()=>{{}}}}}}
 const call=(type,extra)=>new Promise(res=>{{let d=false;for(const l of window.__l)l({{type,...extra}},{{}},v=>{{if(!d){{d=true;res(v)}}}});setTimeout(()=>{{if(!d)res({{timeout:true}})}},4000)}});
 (async()=>{{const fill=await call('FILL_FORM',{{profile:{json.dumps(PROFILE)}}});
 const cv=await call('ATTACH_SAVED_CV',{{savedCV:{{name:'cv.pdf',type:'application/pdf',base64:btoa('%PDF-1.4 test')}}}});
-document.getElementById('out').textContent=JSON.stringify({{fill,cv,cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
+const slots=(await call('DOCUMENT_SLOTS',{{}})).slots;
+const doc=(category,name)=>({{category,name,type:'application/pdf',base64:btoa('%PDF '+name)}});
+const docs=await call('ATTACH_DOCUMENTS',{{documents:[doc('qualifications','msc.pdf'),doc('qualifications','bsc.pdf'),doc('membership','bps.pdf'),doc('research','paper.pdf')]}});
+document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,docs,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
 </script></body></html>'''
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / 'harness.html'
@@ -55,5 +58,12 @@ assert source == ['application_source'], source
 assert r['ats'] == 'TALENTLINK', r['ats']
 # The saved CV goes into the CV slot only, not the other upload areas.
 assert r['cv'].get('ok'), r['cv']
-assert r['cvFiles'] == ['upload_attached_resume_13:1', 'upload_research_paper_1_14:0'], r['cvFiles']
+# Document library: each saved document goes to the upload area made for it; CV untouched.
+assert r['slots'] == ['cv', 'research', 'research', 'qualifications', 'membership', 'other'], r['slots']
+f = r['files']
+assert f['upload_attached_resume_13'] == ['cv.pdf']
+assert f['upload_research_paper_1_14'] == ['paper.pdf'] and f['upload_research_paper_2_15'] == []
+assert f['upload_qualification_certificates_16'] == ['msc.pdf'] and f['upload_professional_membership_17'] == ['bps.pdf']
+assert f['upload_otherattachment_18'] == []
+assert any(x.get('names') == ['bsc.pdf'] and not x['ok'] for x in r['docs']['results']), r['docs']
 print('live form fill ok (TalentLink)')

@@ -19,7 +19,23 @@ const CARD_TEXT={
   USER_REQUIRED:['Your answer is needed','Answer this on the page.'],
   ASK_USER:['Your answer is needed','Answer this on the page.']
 };
-function cards(items){const root=byId('cards');root.replaceChildren();(items||[]).slice(0,20).forEach(x=>{const [title,hint]=CARD_TEXT[x.status]||CARD_TEXT[x.decision]||['Please check',x.reason||''];const d=document.createElement('div');d.className='card';const t=document.createElement('b');t.textContent=title;const l=document.createElement('div');l.textContent=String(x.label||x.question||'').replace(/\s+/g,' ').trim();const h=document.createElement('div');h.className='muted';h.textContent=hint;d.append(t,l,h);root.appendChild(d)})}
+// Contact details missing from the CV (postcode, address, town, phone…) are asked once here,
+// saved to the profile memory and filled now and on every later application.
+const PROFILE_ASK={postcode:'Postcode',address:'Address line 1',address_line2:'Address line 2',city:'Town / city',region:'Region / county',phone:'Phone number',title:'Title (Mr, Ms, Dr…)'};
+function profileAskCard(x){
+  const key=x.canonical==='region'?'city':x.canonical;
+  const input=el('input',{placeholder:PROFILE_ASK[x.canonical],autocomplete:'on'});
+  const status=el('div',{className:'muted',textContent:'Not in your CV. Enter it once — Snapply fills it on every application from now on.'});
+  const go=el('button',{textContent:'Fill & save'});
+  go.onclick=async()=>{try{
+    const v=input.value.trim();if(!v)throw new Error('Enter a value first.');
+    go.disabled=true;await window.JobCopilotMemory.set(key,v,{source:'panel'});
+    await send('FILL_FORM',{profile:await profile()});
+    status.className='done';status.textContent='Filled · saved for next time';
+  }catch(e){go.disabled=false;status.className='block';status.textContent=e.message}};
+  return el('div',{className:'ask-card'},[el('b',{textContent:PROFILE_ASK[x.canonical]}),el('div',{className:'muted',textContent:String(x.label||'').replace(/\s+/g,' ').trim()}),input,el('div',{className:'row'},[go]),status]);
+}
+function cards(items){const root=byId('cards');root.replaceChildren();(items||[]).slice(0,20).forEach(x=>{if(PROFILE_ASK[x.canonical]&&x.status!=='COMPLETE'){root.appendChild(profileAskCard(x));return}const [title,hint]=CARD_TEXT[x.status]||CARD_TEXT[x.decision]||['Please check',x.reason||''];const d=document.createElement('div');d.className='card';const t=document.createElement('b');t.textContent=title;const l=document.createElement('div');l.textContent=String(x.label||x.question||'').replace(/\s+/g,' ').trim();const h=document.createElement('div');h.className='muted';h.textContent=hint;d.append(t,l,h);root.appendChild(d)})}
 async function profile(){
   await window.JobCopilotAPI.ensureScope();
   let {masterProfile}=await chrome.storage.local.get('masterProfile');
@@ -362,6 +378,7 @@ byId('fillAllSafe').onclick=async()=>{try{
   const section=trac?.education?await send('TRAC_EDUCATION_FILL',{profile:p}):trac?.employer?await send('TRAC_EMPLOYER_FILL',{profile:p}):null;
   const sectionNote=section?(section.ok?`${section.section==='employment'?'Employment':'Education'}: ${section.rows.length} row${section.rows.length===1?'':'s'} filled from your CV${section.remaining_records?` · ${section.remaining_records} more need adding`:''} · `:`${section.reason||'History fill stopped'} · `):'';
   const deterministic=await send('FILL_FORM',{profile:p});
+  const attached=await attachEverything();
   const memory=await window.JobCopilotMemory.getAll();
   const options=await send('FILL_CONFIRMED_OPTIONS',{memory});
   const answers=await answerQuestions();
@@ -370,7 +387,7 @@ byId('fillAllSafe').onclick=async()=>{try{
   const filledNow=(deterministic?.results||[]).filter(x=>x.filled).length;
   byId('summary').textContent=!section&&!answers.ask&&!answers.filled&&!filledNow&&!required.missing_count
     ?`Required questions are complete${answers.optional?` · ${answers.optional} optional below`:''} (${required.filled_required}/${required.required_total} answered).`
-    :`${sectionNote}Filled · ${required.filled_required}/${required.required_total} required complete${answers.filled?` · ${answers.filled} from saved answers`:''}${answers.ask?` · ${answers.ask} need your answer`:''}`;
+    :`${sectionNote}Filled · ${required.filled_required}/${required.required_total} required complete${attached.note}${answers.filled?` · ${answers.filled} from saved answers`:''}${answers.ask?` · ${answers.ask} need your answer`:''}`;
   // Questions listed under "Your input is needed" are not repeated as generic cards.
   cards(required.items.filter(x=>x.status!=='COMPLETE'&&!answers.askedIds.has(x.id)&&!answers.askedIds.has('radio:'+x.name)));
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
@@ -706,3 +723,35 @@ async function allowApplication(){
   const b=byId(id);if(!b||typeof b.onclick!=='function')return;
   const run=b.onclick;b.onclick=async e=>{if(await allowApplication())return run.call(b,e)};
 });
+
+// Saved CV and the document library go into empty upload areas they clearly match.
+async function attachEverything(){
+  const names=[];
+  try{
+    const slots=(await send('DOCUMENT_SLOTS'))?.slots||[];
+    if(slots.includes('cv')){
+      const cv=await window.JobCopilotSavedCV.get().catch(()=>null);
+      if(cv){const payload=await window.JobCopilotSavedCV.getPayload();const d=payload?await send('ATTACH_SAVED_CV',{savedCV:payload}):null;if(d?.ok&&!d.already_uploaded)names.push('CV')}
+    }
+    const docs=await window.SnapplyDocumentLibrary.list();
+    if(docs.length&&slots.some(c=>c&&c!=='cv'&&c!=='cover_letter')){
+      const r=await send('ATTACH_DOCUMENTS',{documents:docs});
+      (r?.results||[]).filter(x=>x.ok).forEach(x=>names.push(...x.names));
+    }
+  }catch(_){/* attaching is a convenience; the fill result still stands */}
+  return {names,note:names.length?` · attached ${names.join(', ')}`:''};
+}
+async function renderDocuments(){
+  const box=byId('docList');if(!box)return;
+  const docs=await window.SnapplyDocumentLibrary.list();
+  box.replaceChildren(...(docs.length?docs.map(d=>{
+    const rm=el('button',{textContent:'Remove'});rm.onclick=async()=>{await window.SnapplyDocumentLibrary.remove(d.id);renderDocuments()};
+    return el('div',{className:'row'},[el('span',{textContent:`${window.SnapplyDocumentLibrary.LABELS[d.category]} · ${d.name} (${Math.max(1,Math.round(d.size/1024))} KB)`}),rm]);
+  }):[el('div',{className:'muted',textContent:'No documents yet.'})]));
+}
+byId('docAdd')&&(byId('docAdd').onclick=async()=>{
+  const st=byId('docState');
+  try{await window.SnapplyDocumentLibrary.add(byId('docFile').files?.[0],byId('docCategory').value);byId('docFile').value='';st.textContent='Saved. It will be attached wherever an application asks for this kind of document.';renderDocuments()}
+  catch(e){st.textContent=e.message}
+});
+renderDocuments();

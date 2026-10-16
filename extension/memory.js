@@ -3,7 +3,7 @@
   const ALLOWED_KEYS=new Set([
     'notice_period','salary_expectation','willing_to_relocate','preferred_work_arrangement',
     'driving_licence','right_to_work','sponsorship','country','postcode','title','recent_nhs_experience',
-    'address','address_line2','address_line3','city','phone_device_type','phone_extension','phone_country_code','application_source'
+    'address','address_line2','address_line3','city','phone','phone_device_type','phone_extension','phone_country_code','application_source'
   ]);
   // On the hosted service, legal declarations, personal (special-category) answers and referees
   // never leave this browser: they live in chrome.storage.local only.

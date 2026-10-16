@@ -616,3 +616,76 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     return true;
   });
 })();
+
+// Document library: attach the user's saved documents (certificates, memberships, papers, other)
+// to the upload areas whose heading or field name says what they are for. Never overwrites a
+// field that already holds a file, never touches CV or cover letter fields, never submits.
+(function(){
+  const CATEGORIES=[
+    ['cv',/resume|\bcv\b|curriculum/i],
+    ['cover_letter',/cover[\s_-]*letter|covering[\s_-]*letter/i],
+    ['qualifications',/qualification|certificat|degree|diploma|transcript/i],
+    ['membership',/membership|professional[\s_-]*(?:body|registration)|registration[\s_-]*certificate/i],
+    ['research',/research[\s_-]*paper|publication|writing[\s_-]*sample|\bpaper[\s_-]*\d/i],
+    ['other',/other[\s_-]*(?:attachment|document|file)|otherattachment|additional[\s_-]*(?:document|file|attachment)|supporting[\s_-]*document/i],
+  ];
+  const GENERIC=/^\s*(?:upload\s*file|choose\s*file|browse|attach|upload|drop\s+a?\s*file.*)\s*$/i;
+  function headingFor(el){
+    // The visible title of a drag-and-drop area usually sits just before it.
+    let node=el;
+    for(let depth=0;depth<5&&node;depth++,node=node.parentElement){
+      let prev=node.previousElementSibling;
+      for(let hops=0;prev&&hops<2;hops++,prev=prev.previousElementSibling){
+        const t=String(prev.innerText||prev.textContent||'').replace(/\s+/g,' ').trim();
+        if(t&&t.length<=80&&!GENERIC.test(t))return t;
+      }
+    }
+    return '';
+  }
+  function slotText(el){
+    const label=el.id?document.querySelector(`label[for="${CSS.escape(el.id)}"]`):null;
+    const lt=String(label?.innerText||'').replace(/\s+/g,' ').trim();
+    const group=el.closest('.form-group,[class*="upload"],[class*="attach"],fieldset');
+    return [el.id,el.name,String(el.className||''),String(group?.className||''),GENERIC.test(lt)?'':lt,headingFor(el)].join(' ');
+  }
+  function categoryOf(el){const t=slotText(el);return (CATEGORIES.find(([,re])=>re.test(t))||[null])[0]}
+  function decode(base64){const raw=atob(String(base64||''));const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);return b}
+  function accepts(el,file){
+    const accept=String(el.getAttribute('accept')||'').trim();if(!accept)return true;
+    const name=file.name.toLowerCase(),type=String(file.type||'').toLowerCase();
+    return accept.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean).some(t=>t.startsWith('.')?name.endsWith(t):t.endsWith('/*')?type.startsWith(t.slice(0,-1)):type===t);
+  }
+  function put(el,docs){
+    const dt=new DataTransfer();
+    for(const d of docs){const f=new File([decode(d.base64)],d.name,{type:d.type||'application/octet-stream'});if(!accepts(el,f))return {ok:false,reason:`${d.name} is not an accepted file type here`};dt.items.add(f)}
+    try{el.files=dt.files}catch(e){return {ok:false,reason:'The browser refused the file'}}
+    el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));
+    return {ok:el.files.length===docs.length};
+  }
+  function attachDocuments(library){
+    const slots=[...document.querySelectorAll('input[type="file"]')].map(el=>({el,category:categoryOf(el)}));
+    const results=[];
+    for(const [category] of CATEGORIES){
+      if(category==='cv'||category==='cover_letter')continue;
+      const docs=(library||[]).filter(d=>d.category===category&&d.base64);
+      const free=slots.filter(s=>s.category===category);
+      let next=0;
+      for(const s of free){
+        if(next>=docs.length)break;
+        if(s.el.files?.length){results.push({category,slot:slotText(s.el).trim().slice(0,60),ok:false,reason:'already has a file'});continue}
+        // A field that takes several files gets all remaining documents of its kind.
+        const batch=s.el.multiple?docs.slice(next):[docs[next]];
+        const r=put(s.el,batch);
+        results.push({category,names:batch.map(d=>d.name),ok:r.ok,reason:r.reason});
+        if(r.ok)next+=batch.length;
+      }
+      if(next<docs.length&&free.length)results.push({category,ok:false,reason:`${docs.length-next} more ${category} document(s) than upload areas`,names:docs.slice(next).map(d=>d.name)});
+    }
+    return {ok:true,results,slots:slots.map(s=>s.category)};
+  }
+  window.SnapplyDocuments={categoryOf,attachDocuments};
+  chrome.runtime.onMessage.addListener((m,_s,send)=>{
+    if(m.type==='ATTACH_DOCUMENTS'){try{send(attachDocuments(m.documents||[]))}catch(e){send({ok:false,error:e.message})}}
+    if(m.type==='DOCUMENT_SLOTS'){send({slots:[...document.querySelectorAll('input[type="file"]')].map(categoryOf)})}
+  });
+})();
