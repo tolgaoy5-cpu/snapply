@@ -20,6 +20,7 @@ from origin_policy import ALLOWED_ORIGIN, origin_allowed
 import accounts
 import billing
 import letter_writer
+import field_classifier
 import re
 
 app=FastAPI(title='Snapply Core API',version='0.27.0')
@@ -335,6 +336,33 @@ def usage_application(r:ApplicationUsage):
         return {'ok':True,**accounts.record_application(accounts.current_uid.get(),r.url)}
     except accounts.QuotaError as e:
         raise HTTPException(status_code=402,detail=str(e))
+
+class FieldClassifyRequest(BaseModel):
+    host:str=Field(min_length=1,max_length=200)
+    fields:list[dict[str,Any]]=Field(max_length=60)
+
+@app.post('/v1/fields/classify')
+def fields_classify(r:FieldClassifyRequest):
+    # Form wording only (labels, names, option texts); never the user's values.
+    try:
+        return {'ok':True,'hints':field_classifier.classify(r.host,r.fields)}
+    except ProviderError as e:
+        raise HTTPException(status_code=502,detail=f'Model provider error: {e}')
+
+class PageReport(BaseModel):
+    capture:dict[str,Any]
+    note:str=Field(default='',max_length=1000)
+    fill:dict[str,Any]=Field(default_factory=dict)
+    version:str=Field(default='',max_length=20)
+
+@app.post('/v1/reports')
+async def page_report(request:Request,r:PageReport):
+    if len(await request.body())>400_000:
+        raise HTTPException(status_code=413,detail='Report too large')
+    if (r.capture.get('privacy') or {}).get('values_captured'):
+        raise HTTPException(status_code=422,detail='Reports must not contain field values')
+    name=field_classifier.save_report(accounts.current_uid.get(),r.model_dump())
+    return {'ok':True,'id':name}
 
 class WaitlistRequest(BaseModel):
     email:str=Field(min_length=5,max_length=254,pattern=r'^[^@\s]+@[^@\s]+\.[^@\s]+$')

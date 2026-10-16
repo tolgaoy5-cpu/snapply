@@ -16,7 +16,7 @@ PROFILE = {'full_name': 'Sam Taylor', 'first_name': 'Sam', 'last_name': 'Taylor'
            'experience': [], 'education': []}
 
 
-def run(fixture: str) -> dict:
+def run(fixture: str, extra: str = 'null') -> dict:
     manifest = json.loads((EXT / 'manifest.json').read_text())
     scripts = [j for cs in manifest['content_scripts'] if cs.get('world') != 'MAIN' for j in cs['js'] if j != 'inpage_panel.js']
     tags = '\n'.join(f'<script src="{(EXT / j).as_uri()}"></script>' for j in scripts)
@@ -29,8 +29,9 @@ const call=(type,extra)=>new Promise(res=>{{let d=false;for(const l of window.__
 const cv=await call('ATTACH_SAVED_CV',{{savedCV:{{name:'cv.pdf',type:'application/pdf',base64:btoa('%PDF-1.4 test')}}}});
 const slotInfo=await call('DOCUMENT_SLOTS',{{}});const slots=slotInfo.slots;
 const doc=(category,name)=>({{category,name,type:'application/pdf',base64:btoa('%PDF '+name)}});
+const extra=await (async()=>{{return {extra}}})();
 const docs=await call('ATTACH_DOCUMENTS',{{documents:[doc('qualifications','msc.pdf'),doc('qualifications','bsc.pdf'),doc('membership','bps.pdf'),doc('research','paper.pdf')]}});
-document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,slotInfo,docs,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
+document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,slotInfo,docs,extra,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
 </script></body></html>'''
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / 'harness.html'
@@ -68,3 +69,20 @@ assert f['upload_qualification_certificates_16'] == ['msc.pdf'] and f['upload_pr
 assert f['upload_otherattachment_18'] == []
 assert any(x.get('names') == ['bsc.pdf'] and not x['ok'] for x in r['docs']['results']), r['docs']
 print('live form fill ok (TalentLink)')
+
+# Unfamiliar wording: the rules leave the field alone; with the site's AI field map it is filled.
+steps = """await (async()=>{
+  const before=Object.fromEntries([...document.querySelectorAll('input')].map(e=>[e.id,e.value]));
+  for(const e of document.querySelectorAll('input'))e.value='';
+  const unknown=(await call('UNKNOWN_FIELDS',{})).fields;
+  const hints={};for(const f of unknown)hints[f.sig]=/zip/i.test(f.label)?'postcode':/shoe/i.test(f.label)?'password':'question';
+  await call('FIELD_HINTS',{hints});
+  await call('FILL_FORM',{profile:%s});
+  return {before,unknown:unknown.map(f=>f.label),after:Object.fromEntries([...document.querySelectorAll('input')].map(e=>[e.id,e.value]))};
+})()""" % json.dumps(PROFILE)
+u = run('unfamiliar_form.html', steps)['extra']
+assert u['before']['f7'] == '' and u['before']['f1'] == 'Sam', u
+assert u['unknown'] == ['ZIP / Postal', 'Shoe size'], u['unknown']
+assert u['after']['f7'] == 'E5 9PB' and u['after']['f9'] == '', u  # a hint outside the allowed keys is ignored
+print('AI field map fill ok')
+

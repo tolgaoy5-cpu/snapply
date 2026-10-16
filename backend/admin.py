@@ -4,6 +4,7 @@
     fly ssh console --app snapply-api -C "python admin.py grant-pro someone@gmail.com"
     fly ssh console --app snapply-api -C "python admin.py revoke-pro someone@gmail.com"
     fly ssh console --app snapply-api -C "python admin.py waitlist"
+    fly ssh console --app snapply-api -C "python admin.py reports"          (then: report <file name>)
 
 grant-pro gives a complimentary Pro plan (no Stripe subscription). The person must have signed in
 to Snapply once so that their account exists.
@@ -35,6 +36,18 @@ def _find(email: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) >= 2 and argv[1] == "reports":
+        folder = accounts.data_root() / "reports"
+        files = sorted(folder.glob("*.json")) if folder.exists() else []
+        for f in files[-50:]:
+            data = json.loads(f.read_text())
+            page = data.get("capture", {}).get("page", {})
+            print(f.name, page.get("url_origin", ""), page.get("url_path", "")[:60], "|", data.get("note", "")[:80])
+        print(f"{len(files)} report(s)")
+        return 0
+    if len(argv) >= 2 and argv[1] == "report" and len(argv) == 3:
+        print((accounts.data_root() / "reports" / argv[2].replace("/", "")).read_text())
+        return 0
     if len(argv) >= 2 and argv[1] == "waitlist":
         try:
             entries = json.loads((accounts.data_root() / "waitlist.json").read_text())

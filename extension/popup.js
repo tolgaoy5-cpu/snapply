@@ -377,6 +377,7 @@ byId('fillAllSafe').onclick=async()=>{try{
   if(trac?.references)return renderReferees();
   const section=trac?.education?await send('TRAC_EDUCATION_FILL',{profile:p}):trac?.employer?await send('TRAC_EMPLOYER_FILL',{profile:p}):null;
   const sectionNote=section?(section.ok?`${section.section==='employment'?'Employment':'Education'}: ${section.rows.length} row${section.rows.length===1?'':'s'} filled from your CV${section.remaining_records?` · ${section.remaining_records} more need adding`:''} · `:`${section.reason||'History fill stopped'} · `):'';
+  await learnFields();
   const deterministic=await send('FILL_FORM',{profile:p});
   const attached=await attachEverything();
   const memory=await window.JobCopilotMemory.getAll();
@@ -788,3 +789,34 @@ async function renderDocumentAsks(){
     root.appendChild(el('div',{className:'ask-card'},[el('b',{textContent:slot.label||L[slot.category]}),file,el('div',{className:'row'},[go]),st]));
   }
 }
+
+// Unfamiliar fields: ask the AI field map once per site (form wording only), cache the answer here.
+async function learnFields(){
+  try{
+    const url=(await active())?.url||'';if(!/^https?:/.test(url))return;
+    const host=new URL(url).hostname,key='fieldHints:'+host;
+    const hints=(await chrome.storage.local.get(key))[key]||{};
+    const unknown=(await send('UNKNOWN_FIELDS'))?.fields||[];
+    const todo=unknown.filter(f=>!(f.sig in hints));
+    if(todo.length){
+      const r=await window.JobCopilotAPI.post('/v1/fields/classify',{host,fields:todo.slice(0,60)});
+      Object.assign(hints,r.hints||{});await chrome.storage.local.set({[key]:hints});
+    }
+    if(Object.keys(hints).length)await send('FIELD_HINTS',{hints});
+  }catch(_){/* the rules still fill what they recognise */}
+}
+// "This page didn't fill correctly": send the form's structure (no values) so it can be fixed.
+byId('reportPage')&&(byId('reportPage').onclick=()=>{
+  const box=byId('reportBox');box.hidden=!box.hidden;
+});
+byId('reportSend')&&(byId('reportSend').onclick=async()=>{
+  const st=byId('reportState');
+  try{
+    byId('reportSend').disabled=true;st.textContent='Sending…';
+    const capture=await send('CAPTURE_LIVE_FIXTURE');if(capture?.error)throw new Error(capture.error);
+    const fill=await send('REVIEW_PLAN',{profile:{}}).catch(()=>({}));
+    const r=await window.JobCopilotAPI.post('/v1/reports',{capture,note:byId('reportNote').value.trim().slice(0,1000),
+      fill:{ats:fill?.ats,keys:(fill?.items||[]).map(x=>[x.label?.slice(0,80),x.canonical]).slice(0,120)},version:chrome.runtime.getManifest().version});
+    st.textContent='Thank you — sent. We use it to make Snapply fill this site properly.';byId('reportNote').value='';
+  }catch(e){st.textContent=e.message;byId('reportSend').disabled=false}
+});

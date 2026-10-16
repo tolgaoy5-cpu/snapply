@@ -40,7 +40,18 @@ function canonical(label,el=null){
   // Greenhouse often renders honorific choices as checkbox labels like
   // 'Ms question_123[] ... Title *' rather than a field literally named Title.
   if(/\btitle\s*\*?\b/i.test(text)&&/question_\d+/i.test(text)) return 'title';
-  return FIELD_RULES.find(r=>r.re.test(text))?.key||'unknown';
+  const ruled=FIELD_RULES.find(r=>r.re.test(text))?.key;
+  if(ruled) return ruled;
+  // Fields the rules do not recognise: use what the AI field map learned for this site.
+  const hint=el&&window.__snapplyHints?.[fieldSig(el,text)];
+  return hint&&HINT_KEYS.has(hint)?hint:'unknown';
+}
+// Profile keys an AI hint may map a field to ('question'/'ignore' stay unknown and are asked).
+const HINT_KEYS=new Set(['first_name','last_name','email','phone','phone_country_code','phone_secondary','title','address','address_line2','address_line3','city','region','postcode','country','application_source','notice_period','salary_expectation','right_to_work','sponsorship','supporting_statement']);
+// A field's identity on a site, stable across visits (ids often carry a changing numeric suffix).
+function fieldSig(el,label){
+  const norm=x=>String(x||'').toLowerCase().replace(/\s+/g,' ').trim();
+  return [el.tagName.toLowerCase(),norm(el.getAttribute('name')),norm(el.id).replace(/[_-]?\d+$/,''),norm(label).replace(/\(required\)|\*/g,'').trim().slice(0,140)].join('|');
 }
 function groupInfo(el){let g=el.closest('fieldset,.form-group,.field,.question,.control-group,.row,[class*=employment],[class*=education]');let text=(g?.innerText||'').slice(0,300);let kind=/employment|work experience|work history/i.test(text)?'employment':/education|qualification|university|college/i.test(text)?'education':'generic';return {key:g?(g.id||g.getAttribute('data-testid')||String(g.className)||'group'):'root',kind}}
 function scan(){return semanticElements().map((el,i)=>{const gi=groupInfo(el),label=textFor(el);return {index:i,tag:el.tagName.toLowerCase(),type:el.type||'',name:el.getAttribute('name')||'',id:el.id||'',label,canonical:canonical(label,el),required:el.required||el.getAttribute('aria-required')==='true',options:el.tagName==='SELECT'?[...el.options].map(o=>({text:o.text.trim(),value:o.value})).filter(o=>o.text):[],valuePresent:el.type==='checkbox'||el.type==='radio'?el.checked:!!el.value,group:gi.key,groupKind:gi.kind}})}
@@ -690,5 +701,24 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='ATTACH_DOCUMENTS'){try{send(attachDocuments(m.documents||[]))}catch(e){send({ok:false,error:e.message})}}
     if(m.type==='DOCUMENT_SLOTS'){const all=[...document.querySelectorAll('input[type="file"]')];
       send({slots:all.map(categoryOf),details:all.map(el=>({category:categoryOf(el),label:headingFor(el),filled:!!el.files?.length}))})}
+  });
+})();
+
+
+// AI field map: list the fields the rules could not place (form wording only, never values),
+// and receive the learned mapping for this site.
+(function(){
+  chrome.runtime.onMessage.addListener((m,_s,send)=>{
+    if(m.type==='UNKNOWN_FIELDS'){
+      const fields=semanticElements().filter(el=>!['hidden','file','password','submit','button','search'].includes(el.type)).map(el=>{
+        const label=textFor(el);
+        if(canonical(label,el)!=='unknown')return null;
+        return {sig:fieldSig(el,label),label:label.slice(0,300),tag:el.tagName.toLowerCase(),type:el.type||'',name:el.getAttribute('name')||'',
+          id:el.id||'',autocomplete:el.getAttribute('autocomplete')||'',
+          options:el.tagName==='SELECT'?[...el.options].map(o=>o.text.trim()).filter(Boolean).slice(0,30):[]};
+      }).filter(Boolean);
+      send({fields:[...new Map(fields.map(f=>[f.sig,f])).values()]});
+    }
+    if(m.type==='FIELD_HINTS'){window.__snapplyHints={...(window.__snapplyHints||{}),...(m.hints||{})};send({ok:true,count:Object.keys(window.__snapplyHints).length})}
   });
 })();
