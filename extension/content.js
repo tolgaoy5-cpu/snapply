@@ -630,14 +630,16 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     ['other',/other[\s_-]*(?:attachment|document|file)|otherattachment|additional[\s_-]*(?:document|file|attachment)|supporting[\s_-]*document/i],
   ];
   const GENERIC=/^\s*(?:upload\s*file|choose\s*file|browse|attach|upload|drop\s+a?\s*file.*)\s*$/i;
+  // Drop-zone prompts ("note_add upload file or drop a file here") are not headings.
+  const DROPZONE=/upload\s+(?:a\s+)?file|drop\s+(?:a\s+|your\s+)?files?\s+here|choose\s+file|drag\s+(?:and|&)\s+drop|browse\s+files?|accepted\s+file|maximum\s+file/i;
   function headingFor(el){
     // The visible title of a drag-and-drop area usually sits just before it.
     let node=el;
-    for(let depth=0;depth<5&&node;depth++,node=node.parentElement){
+    for(let depth=0;depth<8&&node;depth++,node=node.parentElement){
       let prev=node.previousElementSibling;
       for(let hops=0;prev&&hops<2;hops++,prev=prev.previousElementSibling){
-        const t=String(prev.innerText||prev.textContent||'').replace(/\s+/g,' ').trim();
-        if(t&&t.length<=80&&!GENERIC.test(t))return t;
+        const t=String(prev.innerText||prev.textContent||'').replace(/\s+/g,' ').replace(/\(required\)/i,'').trim();
+        if(t&&t.length<=80&&!GENERIC.test(t)&&!DROPZONE.test(t))return t;
       }
     }
     return '';

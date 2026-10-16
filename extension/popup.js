@@ -767,8 +767,14 @@ async function renderDocumentAsks(){
   const docs=await window.SnapplyDocumentLibrary.list();
   const L=window.SnapplyDocumentLibrary.LABELS;
   const root=byId('cards');
+  // One card per kind of document, titled with the page's own heading(s).
+  const byKind={};
   for(const slot of slots){
     if(slot.filled||!L[slot.category]||docs.some(d=>d.category===slot.category))continue;
+    (byKind[slot.category]=byKind[slot.category]||[]).push(slot.label||L[slot.category]);
+  }
+  for(const [category,labels] of Object.entries(byKind)){
+    const slot={category,label:[...new Set(labels)].join(' · ')};
     const file=el('input',{type:'file'});
     const st=el('div',{className:'muted',textContent:`Optional · add your ${L[slot.category].toLowerCase()} once and Snapply attaches it to every application that asks for it.`});
     const go=el('button',{textContent:'Add & attach'});
