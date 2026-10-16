@@ -1,0 +1,19 @@
+<!-- Lever application form patterns (structure observed on jobs.lever.co 2026-10-16, no personal data). -->
+<form id="application-form"><ul>
+<li class="application-question"><label><div class="application-label">Full name<span class="required">✱</span></div><div class="application-field"><input type="text" name="name" required></div></label></li>
+<li class="application-question"><div class="application-label multiple-select">Pronouns</div><div class="application-field"><ul>
+<li><label><input type="checkbox" name="pronouns" value="He/him"><span class="application-answer-alternative">He/him</span></label></li>
+<li><label><input type="checkbox" name="pronouns" value="She/her"><span class="application-answer-alternative">She/her</span></label></li>
+<li><label><input type="checkbox" name="pronouns" value="They/them"><span class="application-answer-alternative">They/them</span></label></li></ul></div></li>
+<li class="application-question"><label><div class="application-label">Email<span class="required">✱</span></div><div class="application-field"><input type="email" name="email" required></div></label></li>
+<li class="application-question"><label><div class="application-label">Phone<span class="required">✱</span></div><div class="application-field"><input type="text" name="phone" required></div></label></li>
+<li class="application-question"><label><div class="application-label">Current location </div><div class="application-field"><input class="location-input" type="text" maxlength="100" name="location"><input type="hidden" name="selectedLocation"></div></label></li>
+<li class="application-question"><label><div class="application-label">Current company</div><div class="application-field"><input type="text" name="org"></div></label></li>
+<li class="application-question"><label><div class="application-label">LinkedIn URL</div><div class="application-field"><input type="text" name="urls[LinkedIn]"></div></label></li>
+<li class="application-question"><label><div class="application-label">Portfolio URL</div><div class="application-field"><input type="text" name="urls[Portfolio]"></div></label></li>
+<li class="application-question custom-question"><div><div class="application-label full-width textarea"><div class="text">Roughly speaking, what are your salary expectations?<span class="required">✱</span></div></div><div class="application-field full-width required-field"><textarea class="card-field-input" name="cards[abc][field0]" required="required"></textarea></div></div></li>
+<li class="application-question"><div class="application-label full-width multiple-choice"><div class="text">What gender are you?</div></div><div class="application-field full-width"><ul data-qa="multiple-choice">
+<li><label><input type="radio" name="surveysResponses[s1][responses][field0]" value="Male"><span class="application-answer-alternative">Male</span></label></li>
+<li><label><input type="radio" name="surveysResponses[s1][responses][field0]" value="Female"><span class="application-answer-alternative">Female</span></label></li>
+<li><label><input type="radio" name="surveysResponses[s1][responses][field0]" value="Prefer not to say"><span class="application-answer-alternative">Prefer not to say</span></label></li></ul></div></li>
+</ul></form>

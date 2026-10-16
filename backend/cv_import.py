@@ -168,8 +168,21 @@ def parse_cv_text(text:str)->dict:
             languages.append({'language':lang_lines[i],'level':lang_lines[i+1]}); i+=2
         else: i+=1
 
+    def _url(pattern):
+        m=re.search(pattern,flat,re.I)
+        if not m:return None
+        u=m.group(0).rstrip('/.,;)')
+        return u if u.lower().startswith('http') else 'https://'+u
+    linkedin=_url(r'(?:https?://)?(?:[a-z]{2,3}\.)?linkedin\.com/in/[A-Za-z0-9_%-]+/?')
+    github=_url(r'(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_-]+')
+    website=None
+    for m in re.finditer(r'https?://[^\s,;)]+|(?<![@\w])www\.[^\s,;)]+',flat,re.I):
+        u=m.group(0).rstrip('/.,;)')
+        if not re.search(r'linkedin\.com|github\.com',u,re.I):
+            website=u if u.lower().startswith('http') else 'https://'+u;break
     return {
         'full_name':full_name,
+        'linkedin':linkedin,'github':github,'website':website,
         'first_name':' '.join(parts[:-1]) if len(parts)>1 else full_name,
         'last_name':parts[-1] if parts else '',
         'email':email,'phone':phone,'city':city,'location':f'{city}, UK' if city else None,

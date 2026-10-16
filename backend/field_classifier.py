@@ -17,6 +17,11 @@ from accounts import data_root
 from llm_provider import ProviderError, _openai_settings
 
 KEYS = {
+    "full_name": "the applicant's full name in one field",
+    "location": "current location as free text (city, country)",
+    "linkedin": "LinkedIn profile URL",
+    "github": "GitHub profile URL",
+    "website": "personal website or portfolio URL",
     "first_name": "given / first name, preferred or known-as name",
     "last_name": "family name / surname",
     "email": "email address",

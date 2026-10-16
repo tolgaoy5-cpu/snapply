@@ -12,6 +12,7 @@ if not Path(CHROME).exists():
     print('chrome not installed, skipped'); sys.exit(0)
 
 PROFILE = {'full_name': 'Sam Taylor', 'first_name': 'Sam', 'last_name': 'Taylor', 'email': 'sam@example.com',
+           'linkedin': 'https://www.linkedin.com/in/sam-taylor', 'website': 'https://samtaylor.dev',
            'phone': '07700 900123', 'postcode': 'E5 9PB', 'country': 'United Kingdom', 'city': 'London',
            'experience': [], 'education': []}
 
@@ -31,7 +32,7 @@ const slotInfo=await call('DOCUMENT_SLOTS',{{}});const slots=slotInfo.slots;
 const doc=(category,name)=>({{category,name,type:'application/pdf',base64:btoa('%PDF '+name)}});
 const extra=await (async()=>{{return {extra}}})();
 const docs=await call('ATTACH_DOCUMENTS',{{documents:[doc('qualifications','msc.pdf'),doc('qualifications','bsc.pdf'),doc('membership','bps.pdf'),doc('research','paper.pdf')]}});
-document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,slotInfo,docs,extra,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
+document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,slotInfo,docs,extra,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value])),byName:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].filter(e=>e.name&&e.type!=='radio'&&e.type!=='checkbox').map(e=>[e.name,e.value]))}})}})();
 </script></body></html>'''
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / 'harness.html'
@@ -118,4 +119,22 @@ assert len(rtw) == 1 and rtw[0][0] == 'radio' and rtw[0][1].startswith('Do you h
 assert w['extra']['slots'][0]['category'] == 'cv' and 'SVG' not in w['extra']['slots'][0]['label'], w['extra']['slots']
 assert w['values']['firstname'] == 'Sam' and w['values']['email'] == 'sam@example.com' and w['values']['phone'] == '07700 900123'
 print('Workable form ok')
+
+# Lever: full name, location, links, custom questions captioned by their container, EEO radios
+# and pronoun checkboxes as single questions.
+steps = """await (async()=>{
+  const q=(await call('PAGE_QUESTIONS',{})).questions;
+  return q.map(x=>[x.control,x.label,x.options,x.sensitivity]);
+})()"""
+l = run('lever_form.html', steps)
+n = l['byName']
+assert n['name'] == 'Sam Taylor' and n['email'] == 'sam@example.com' and n['phone'] == '07700 900123', n
+assert n['location'] == 'London, United Kingdom' and n['urls[LinkedIn]'] == 'https://www.linkedin.com/in/sam-taylor' and n['urls[Portfolio]'] == 'https://samtaylor.dev', n
+q = l['extra']
+labels = {x[1]: x for x in q}
+assert 'Roughly speaking, what are your salary expectations?' in labels, list(labels)
+assert labels['What gender are you?'][0] == 'radio' and labels['What gender are you?'][2] == ['Male', 'Female', 'Prefer not to say'] and labels['What gender are you?'][3] == 'sensitive'
+assert labels['Pronouns'][0] == 'checkbox_group' and labels['Pronouns'][2] == ['He/him', 'She/her', 'They/them']
+assert not any(x[1] in ('Full name', 'Current location', 'LinkedIn URL', 'Portfolio URL') for x in q), q
+print('Lever form ok')
 

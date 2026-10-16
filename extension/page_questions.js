@@ -11,17 +11,31 @@
   const stripStar=s=>clean(s).replace(/\s*\(required\)\s*$/i,'').replace(/\s*\*\s*$/,'');
 
   // Profile-driven fields are filled elsewhere; these are not "questions".
-  const PROFILE_KEYS=new Set(['first_name','last_name','email','phone','phone_country_code','phone_extension','phone_device_type','country','postcode','city','address','address_line2','address_line3','title','resume','employer','job_title','start_date','end_date','education','qualification','application_source']);
+  const PROFILE_KEYS=new Set(['full_name','location','linkedin','github','website','first_name','last_name','email','phone','phone_country_code','phone_extension','phone_device_type','country','postcode','city','address','address_line2','address_line3','title','resume','employer','job_title','start_date','end_date','education','qualification','application_source']);
 
   function legendFor(el){return clean(el.closest('fieldset')?.querySelector('legend')?.innerText||'')}
   // Group caption: <legend>, or an ARIA group's aria-labelledby / aria-label (TRAC radio groups).
   function groupLabel(el){
     const legend=legendFor(el);if(legend)return legend;
-    const g=el.closest('[role="group"],[role="radiogroup"]');if(!g)return '';
+    const g=el.closest('[role="group"],[role="radiogroup"]');if(!g)return containerLabelPQ(el);
     const ids=(g.getAttribute('aria-labelledby')||'').split(/\s+/).filter(Boolean);
     const byIds=ids.map(id=>document.getElementById(id)?.innerText||'').join(' ');
-    return clean(byIds||g.getAttribute('aria-label')||'');
+    return clean(byIds||g.getAttribute('aria-label')||'')||containerLabelPQ(el);
   }
+// The caption of the question a control sits in, for forms whose labels are not linked to the
+// control (Lever custom questions, many hand-built forms): nearest question container's label text.
+function containerLabelPQ(el){
+  const tidy=s=>String(s||'').replace(/\s+/g,' ').replace(/\s*[✱*]\s*$/,'').replace(/\(required\)/i,'').trim();
+  for(const sel of ['.application-question','[data-qa*="question"]','fieldset','[role="group"]','[role="radiogroup"]','.form-group','.field','[class*="question"]','[class*="field"]']){
+    const box=el.closest(sel);if(!box)continue;
+    for(const c of box.querySelectorAll('.application-label .text,.application-label,legend,label,[class*="label"],[class*="title"],h3,h4,h5')){
+      if(c.contains(el)||c.querySelector('input,select,textarea'))continue;
+      const t=tidy(c.innerText||c.textContent);if(t&&t.length<=300)return t;
+    }
+  }
+  return '';
+}
+
   // Field labels like "Day", "Month", "Other. Please specify..." need their group's caption.
   const GENERIC=/^(day|month|year|other\.?(\s*please specify\.*)?|please provide details below|please specify\.*|details)$/i;
   const STEM={dob:'Date of birth',dateofbirth:'Date of birth',startdate:'Start date',enddate:'End date',nhsstart:'NHS start date',registrationexpiry:'Registration expiry'};
@@ -99,6 +113,14 @@
       if(!isWorkday()&&PROFILE_KEYS.has(canonical(label,radios[0]))&&!isQuestionSentence(label))continue;
       add({qid:'radio:'+name,el:radios[0],radios,label:stripStar(label),kind:'choice',control:'radio',required:isRequiredText(label)||radios.some(r=>r.required||r.getAttribute('aria-required')==='true')});
     }
+    // Native checkbox groups ("Pronouns", "Tick all that apply"): several boxes sharing one name.
+    const checks={};
+    for(const c of document.querySelectorAll('input[type="checkbox"]')){if(visible(c)&&c.name)(checks[c.name]=checks[c.name]||[]).push(c)}
+    for(const [name,boxes] of Object.entries(checks)){
+      if(boxes.length<2)continue;
+      const label=groupLabel(boxes[0]);if(!label)continue;
+      add({qid:'checks:'+name,el:boxes[0],radios:boxes,label:stripStar(label),kind:'choice',control:'checkbox_group',required:isRequiredText(label)||boxes.some(b=>b.required)});
+    }
     // ARIA radio/checkbox groups (TalentLink and other custom widgets): the real inputs are hidden and
     // the visible options are role="radio"/"checkbox" elements labelled through aria-labelledby.
     for(const g of document.querySelectorAll('[role="radiogroup"],[role="group"]')){
@@ -141,6 +163,7 @@
     if(c.control==='select'){const o=c.el.selectedOptions?.[0];return o&&o.value!==''&&!EMPTY.test(clean(o.text))?clean(o.text):''}
     if(c.control==='radio'){const r=c.radios.find(x=>x.checked);return r?radioLabel(r):''}
     if(c.control==='aria_radio'){const o=c.options.find(ariaChecked);return o?ariaText(o):''}
+    if(c.control==='checkbox_group')return c.radios.filter(x=>x.checked).map(radioLabel).join(', ');
     if(c.control==='aria_checkbox')return c.options.filter(ariaChecked).map(ariaText).join(', ');
     return String(c.el.value||'').trim();
   }
@@ -171,7 +194,7 @@
       value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
       max_length:c.el&&c.el.maxLength>0?c.el.maxLength:null,multiline:!!(c.el&&c.el.tagName==='TEXTAREA'),
       options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
-        :c.control==='radio'?c.radios.map(radioLabel):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
+        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
   }
 
   // Workday dropdown options only exist while the list is open: open, read, close. No option is clicked.
@@ -222,6 +245,12 @@
         const r=c.radios.find(x=>norm(radioLabel(x))===norm(wanted));
         if(!r)return {ok:false,reason:'That option is not offered here.'};
         r.click();
+      }else if(c.control==='checkbox_group'){
+        const labels=c.radios.map(radioLabel);
+        let want=labels.filter(l=>norm(l)===norm(wanted));
+        if(!want.length){let rest=norm(wanted);for(const l of [...labels].sort((x,y)=>y.length-x.length)){const n=norm(l);if(n&&rest.includes(n)){want.push(l);rest=rest.replace(n,' ')}}
+          if(!want.length||rest.replace(/[\s,]+/g,'').length)return {ok:false,reason:`“${wanted}” is not offered here.`}}
+        for(const b of c.radios){const on=want.some(w=>norm(w)===norm(radioLabel(b)));if(b.checked!==on)b.click()}
       }else if(c.control==='aria_radio'||c.control==='aria_checkbox'){
         // Several ticked boxes are saved as "A, B", but option texts can contain commas themselves:
         // pick out whole option labels (longest first) instead of splitting on commas.
