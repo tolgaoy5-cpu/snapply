@@ -94,7 +94,7 @@ function containerLabelPQ(el){
           continue;
         }
         if(el.tagName==='SELECT')add({qid:el.id||el.name,el,label:stripStar(label),kind:'choice',control:'select',required:el.required||el.getAttribute('aria-required')==='true'||isRequiredText(label)});
-        else if(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&/^(text|)$/.test(el.type)&&el.id))
+        else if(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&/^(text|number|)$/.test(el.type)&&(el.id||el.name)))
           add({qid:el.id||el.name,el,label:stripStar(label),kind:'text',control:'text',required:el.required||el.getAttribute('aria-required')==='true'||/\*/.test(label)});
       }
     }

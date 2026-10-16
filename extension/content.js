@@ -655,7 +655,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
   ];
   const GENERIC=/^\s*(?:upload\s*file|choose\s*file|browse|attach|upload|drop\s+a?\s*file.*)\s*$/i;
   // Drop-zone prompts ("note_add upload file or drop a file here") are not headings.
-  const DROPZONE=/upload\s+(?:a\s+)?file|drop\s+(?:a\s+|your\s+)?files?\s+here|choose\s+file|drag\s+(?:and|&)\s+drop|browse\s+files?|accepted\s+file|maximum\s+file|svgs?\s+(?:are\s+)?not\s+supported|browser\s+does\s+not\s+support/i;
+  const DROPZONE=/upload\s+(?:a\s+)?file|drop\s+(?:a\s+|your\s+)?files?\s+here|choose\s+file|drag\s+(?:and|&)\s+drop|browse\s+files?|accepted\s+file|maximum\s+file|drop\s+your\s+files?|or\s+upload\b|svgs?\s+(?:are\s+)?not\s+supported|browser\s+does\s+not\s+support/i;
   function headingFor(el){
     // The visible title of a drag-and-drop area usually sits just before it.
     let node=el;
