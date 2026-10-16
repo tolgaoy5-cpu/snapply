@@ -1,0 +1,14 @@
+<!-- Workable application form patterns (structure observed on apply.workable.com 2026-10-16, no personal data). -->
+<form data-ui="application-form">
+<div><label for="firstname">* First name</label><input id="firstname" name="firstname" placeholder="First name" required></div>
+<div><label for="lastname">* Last name</label><input id="lastname" name="lastname" placeholder="Last name" required></div>
+<div><label for="email">* Email</label><input id="email" name="email" type="email" placeholder="Email" required></div>
+<div><label for="phone">Phone</label><input id="phone" name="phone" type="tel"></div>
+<div><span id="lbl_res">Resume</span><div><svg><text>SVGs not supported by this browser.</text></svg></div><input type="file" id="input_files_input_X1" data-ui="resume" aria-labelledby="lbl_res" style="display:none"></div>
+<div><label for="QA_1">* When are you available to start?</label><input id="QA_1" name="QA_1" placeholder="When are you available to start?" required></div>
+<div><span id="rtw_label">Do you have the right to work in the UK?</span>
+<fieldset role="radiogroup" data-ui="QA_2" aria-labelledby="rtw_label">
+<div data-ui="option" role="radio" aria-checked="false" aria-labelledby="rtw_label rl_yes" tabindex="0"><label><input type="radio" name="QA_2" value="true" required><span id="rl_yes">YES</span></label></div>
+<div data-ui="option" role="radio" aria-checked="false" aria-labelledby="rtw_label rl_no" tabindex="0"><label><input type="radio" name="QA_2" value="false" required><span id="rl_no">NO</span></label></div>
+</fieldset></div>
+</form>

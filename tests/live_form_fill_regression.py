@@ -107,3 +107,15 @@ assert a['r3'].get('ok'), a['r3']
 assert [v for l, v in a['after'] if 'caring' in l][0] == 'No known disability, impairment or learning difference'
 print('ARIA groups ok')
 
+# Workable: a radio group that is both native and ARIA is listed once, under its own question.
+steps = """await (async()=>{
+  const q=(await call('PAGE_QUESTIONS',{})).questions;
+  return {q:q.map(x=>[x.control,x.label,x.options]),slots:(await call('DOCUMENT_SLOTS',{})).details};
+})()"""
+w = run('workable_form.html', steps)
+rtw = [x for x in w['extra']['q'] if 'right to work' in x[1]]
+assert len(rtw) == 1 and rtw[0][0] == 'radio' and rtw[0][1].startswith('Do you have the right to work') and rtw[0][2] == ['YES', 'NO'], w['extra']['q']
+assert w['extra']['slots'][0]['category'] == 'cv' and 'SVG' not in w['extra']['slots'][0]['label'], w['extra']['slots']
+assert w['values']['firstname'] == 'Sam' and w['values']['email'] == 'sam@example.com' and w['values']['phone'] == '07700 900123'
+print('Workable form ok')
+

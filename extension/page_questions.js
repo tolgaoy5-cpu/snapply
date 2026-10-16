@@ -106,6 +106,8 @@
       const role=g.getAttribute('role')==='radiogroup'?'radio':'checkbox';
       const opts=[...g.querySelectorAll(`[role="${role}"]`)].filter(visible);
       if(opts.length<2||opts.every(o=>o.matches('input')))continue;
+      // Options wrapping ordinary visible inputs are already read as a native radio/checkbox group.
+      if(opts.some(o=>[...o.querySelectorAll('input[type="radio"],input[type="checkbox"]')].some(visible)))continue;
       const label=ariaText(g)||groupLabel(opts[0]);if(!label)continue;
       const qid='aria:'+(g.id||g.getAttribute('aria-labelledby')||clean(label).slice(0,60));
       add({qid,el:g,options:opts,label:stripStar(label),kind:'choice',control:role==='radio'?'aria_radio':'aria_checkbox',

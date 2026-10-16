@@ -2,7 +2,7 @@ const FIELD_RULES=[
  {key:'application_source',re:/how did you hear about us|application source|source of application|where (?:did )?you (?:hear|heard|see|saw|find|found)\b|where .*heard about/i},{key:'first_name',re:/^known as\b|preferred (?:first )?name/i},{key:'first_name',re:/first\s*name|forename|given\s*name/i},{key:'last_name',re:/last\s*name|surname|family\s*name/i},
  {key:'email',re:/e-?mail/i},{key:'phone_country_code',re:/country\s+phone\s+code/i},{key:'country',re:/^country(?:\s*code)?$/i},{key:'phone_device_type',re:/phone\s+device\s+type/i},{key:'phone_extension',re:/phone\s+extension/i},{key:'phone',re:/^(?!.*extension)(?!.*device).*?(?:phone\s*number|mobile(?:\s*number)?|telephone(?:\s*number)?|phone)$/i},{key:'resume',re:/resume|cv|curriculum vitae/i},{key:'title',re:/^title(?:\s*\*)?|honou?rific|salutation/i},{key:'address',re:/address\s*(line)?\s*1|street\s*address/i},{key:'address_line2',re:/address\s*(line)?\s*2/i},{key:'address_line3',re:/address\s*(line)?\s*3/i},
  {key:'region',re:/^region\b|^county\b/i},{key:'city',re:/\bcity\b|\btown\b/i},{key:'postcode',re:/post\s*code|postal\s*code/i},{key:'right_to_work',re:/right\s+to\s+work|work\s+authori[sz]ation/i},
- {key:'sponsorship',re:/sponsor|sponsorship|visa sponsorship/i},{key:'notice_period',re:/notice\s+period/i},{key:'salary_expectation',re:/salary|compensation|pay expectation/i},
+ {key:'sponsorship',re:/sponsor|sponsorship|visa sponsorship/i},{key:'notice_period',re:/notice\s+period|available\s+to\s+start|when\s+(?:can|could|would)\s+you\s+start|earliest\s+start|availability\s+to\s+start/i},{key:'salary_expectation',re:/salary|compensation|pay expectation/i},
  {key:'supporting_statement',re:/supporting\s+statement|personal\s+statement|why.*role|why.*apply|why.*work|why.*company|motivation|suitability|relevant experience/i},
  {key:'recent_nhs_experience',re:/recent\s+nhs\s+experience|nhs\s+experience/i},{key:'employer',re:/employer|company|organisation|organization/i},{key:'job_title',re:/job\s*title|\bposition\b|\brole\b/i},
  {key:'start_date',re:/start\s*date|date\s*from|from\s*date/i},{key:'end_date',re:/end\s*date|date\s*to|to\s*date/i},
@@ -642,7 +642,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
   ];
   const GENERIC=/^\s*(?:upload\s*file|choose\s*file|browse|attach|upload|drop\s+a?\s*file.*)\s*$/i;
   // Drop-zone prompts ("note_add upload file or drop a file here") are not headings.
-  const DROPZONE=/upload\s+(?:a\s+)?file|drop\s+(?:a\s+|your\s+)?files?\s+here|choose\s+file|drag\s+(?:and|&)\s+drop|browse\s+files?|accepted\s+file|maximum\s+file/i;
+  const DROPZONE=/upload\s+(?:a\s+)?file|drop\s+(?:a\s+|your\s+)?files?\s+here|choose\s+file|drag\s+(?:and|&)\s+drop|browse\s+files?|accepted\s+file|maximum\s+file|svgs?\s+(?:are\s+)?not\s+supported|browser\s+does\s+not\s+support/i;
   function headingFor(el){
     // The visible title of a drag-and-drop area usually sits just before it.
     let node=el;
@@ -659,7 +659,8 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     const label=el.id?document.querySelector(`label[for="${CSS.escape(el.id)}"]`):null;
     const lt=String(label?.innerText||'').replace(/\s+/g,' ').trim();
     const group=el.closest('.form-group,[class*="upload"],[class*="attach"],fieldset');
-    return [el.id,el.name,String(el.className||''),String(group?.className||''),GENERIC.test(lt)?'':lt,headingFor(el)].join(' ');
+    const lb=String(el.getAttribute('aria-labelledby')||'').split(/\s+/).map(id=>document.getElementById(id)?.innerText||'').join(' ');
+    return [el.id,el.name,el.getAttribute('data-ui')||'',String(el.className||''),String(group?.className||''),GENERIC.test(lt)?'':lt,lb,headingFor(el)].join(' ');
   }
   function categoryOf(el){const t=slotText(el);return (CATEGORIES.find(([,re])=>re.test(t))||[null])[0]}
   function decode(base64){const raw=atob(String(base64||''));const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);return b}
