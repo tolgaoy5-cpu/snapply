@@ -138,3 +138,20 @@ assert labels['Pronouns'][0] == 'checkbox_group' and labels['Pronouns'][2] == ['
 assert not any(x[1] in ('Full name', 'Current location', 'LinkedIn URL', 'Portfolio URL') for x in q), q
 print('Lever form ok')
 
+# Ashby: legal name, yes/no answer buttons, and checkbox groups whose boxes are named after their options.
+steps = """await (async()=>{
+  const q=(await call('PAGE_QUESTIONS',{})).questions;
+  const yn=q.find(x=>x.control==='pressed_buttons');
+  const r=yn?await call('FILL_QUESTION',{qid:yn.qid,value:'Yes'}):null;
+  const after=(await call('PAGE_QUESTIONS',{})).questions.find(x=>x.control==='pressed_buttons');
+  return {q:q.map(x=>[x.control,x.label,x.options]),r,after:after&&after.value};
+})()"""
+a = run('ashby_form.html', steps)
+assert a['byName']['_systemfield_name'] == 'Sam Taylor' and a['byName']['_systemfield_email'] == 'sam@example.com' and a['byName']['3991'] == 'https://www.linkedin.com/in/sam-taylor', a['byName']
+qs = {x[1]: x for x in a['extra']['q']}
+yn = qs['Are you based in London or within a commutable distance of the office?']
+assert yn[0] == 'pressed_buttons' and yn[2] == ['Yes', 'No'] and a['extra']['r']['ok'] and a['extra']['after'] == 'Yes', a['extra']
+sd = qs['What is your preferred start date?']
+assert sd[0] == 'checkbox_group' and sd[2] == ['Monday, November 9th', 'Monday, November 26th'], sd
+print('Ashby form ok')
+

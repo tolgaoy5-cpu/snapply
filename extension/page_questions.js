@@ -114,12 +114,29 @@ function containerLabelPQ(el){
       add({qid:'radio:'+name,el:radios[0],radios,label:stripStar(label),kind:'choice',control:'radio',required:isRequiredText(label)||radios.some(r=>r.required||r.getAttribute('aria-required')==='true')});
     }
     // Native checkbox groups ("Pronouns", "Tick all that apply"): several boxes sharing one name.
-    const checks={};
-    for(const c of document.querySelectorAll('input[type="checkbox"]')){if(visible(c)&&c.name)(checks[c.name]=checks[c.name]||[]).push(c)}
+    // Boxes belong together when they share a name, or (Ashby: each box named after its option) a fieldset/group.
+    const checks={};const boxKey=new Map();let n=0;
+    for(const c of document.querySelectorAll('input[type="checkbox"]')){
+      if(!visible(c))continue;
+      const sameName=c.name&&document.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(c.name)}"]`).length>1;
+      const group=c.closest('fieldset,[role="group"]');
+      let key=sameName?'n:'+c.name:group?(boxKey.get(group)||(boxKey.set(group,'g:'+(group.id||++n)),boxKey.get(group))):null;
+      if(key)(checks[key]=checks[key]||[]).push(c);
+    }
     for(const [name,boxes] of Object.entries(checks)){
       if(boxes.length<2)continue;
       const label=groupLabel(boxes[0]);if(!label)continue;
-      add({qid:'checks:'+name,el:boxes[0],radios:boxes,label:stripStar(label),kind:'choice',control:'checkbox_group',required:isRequiredText(label)||boxes.some(b=>b.required)});
+      add({qid:'checks:'+(name.startsWith('n:')?name.slice(2):(boxes[0].id||name)),el:boxes[0],radios:boxes,label:stripStar(label),kind:'choice',control:'checkbox_group',required:isRequiredText(label)||boxes.some(b=>b.required)});
+    }
+    // Yes/No (or few-choice) answer buttons with aria-pressed, e.g. Ashby, backed by a hidden input.
+    const pressedBoxes=new Set();
+    for(const b of document.querySelectorAll('button[aria-pressed]')){
+      const box=b.parentElement;if(!box||pressedBoxes.has(box)||!visible(b))continue;pressedBoxes.add(box);
+      const btns=[...box.querySelectorAll(':scope > button[aria-pressed]')].filter(visible);
+      if(btns.length<2||btns.length>6)continue;
+      const label=containerLabelPQ(btns[0]);if(!label)continue;
+      add({qid:'pressed:'+(box.querySelector('input[name]')?.name||clean(label).slice(0,60)),el:box,options:btns,label:stripStar(label),
+        kind:'choice',control:'pressed_buttons',required:isRequiredText(label)});
     }
     // ARIA radio/checkbox groups (TalentLink and other custom widgets): the real inputs are hidden and
     // the visible options are role="radio"/"checkbox" elements labelled through aria-labelledby.
@@ -163,6 +180,7 @@ function containerLabelPQ(el){
     if(c.control==='select'){const o=c.el.selectedOptions?.[0];return o&&o.value!==''&&!EMPTY.test(clean(o.text))?clean(o.text):''}
     if(c.control==='radio'){const r=c.radios.find(x=>x.checked);return r?radioLabel(r):''}
     if(c.control==='aria_radio'){const o=c.options.find(ariaChecked);return o?ariaText(o):''}
+    if(c.control==='pressed_buttons'){const o=c.options.find(x=>x.getAttribute('aria-pressed')==='true');return o?clean(o.innerText):''}
     if(c.control==='checkbox_group')return c.radios.filter(x=>x.checked).map(radioLabel).join(', ');
     if(c.control==='aria_checkbox')return c.options.filter(ariaChecked).map(ariaText).join(', ');
     return String(c.el.value||'').trim();
@@ -194,7 +212,7 @@ function containerLabelPQ(el){
       value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
       max_length:c.el&&c.el.maxLength>0?c.el.maxLength:null,multiline:!!(c.el&&c.el.tagName==='TEXTAREA'),
       options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
-        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
+        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):c.control==='pressed_buttons'?c.options.map(o=>clean(o.innerText)):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
   }
 
   // Workday dropdown options only exist while the list is open: open, read, close. No option is clicked.
@@ -245,6 +263,10 @@ function containerLabelPQ(el){
         const r=c.radios.find(x=>norm(radioLabel(x))===norm(wanted));
         if(!r)return {ok:false,reason:'That option is not offered here.'};
         r.click();
+      }else if(c.control==='pressed_buttons'){
+        const o=c.options.find(x=>norm(clean(x.innerText))===norm(wanted));
+        if(!o)return {ok:false,reason:'That option is not offered here.'};
+        if(o.getAttribute('aria-pressed')!=='true')o.click();
       }else if(c.control==='checkbox_group'){
         const labels=c.radios.map(radioLabel);
         let want=labels.filter(l=>norm(l)===norm(wanted));
