@@ -21,6 +21,7 @@ import accounts
 import billing
 import letter_writer
 import field_classifier
+import rate_limit
 import re
 
 app=FastAPI(title='Snapply Core API',version='0.27.0')
@@ -46,6 +47,11 @@ async def reject_foreign_origins(request:Request,call_next):
             return JSONResponse(status_code=401,content={'detail':'Account not found, please sign in again.'})
         accounts.current_uid.set(uid)
         accounts.current_user_dir.set(accounts.user_dir(uid))
+    if accounts.cloud_mode() and request.method!='OPTIONS':
+        wait=rate_limit.check(request.url.path,accounts.current_uid.get(),rate_limit.client_ip(request.headers))
+        if wait:
+            return JSONResponse(status_code=429,headers={'Retry-After':str(wait)},
+                                content={'detail':f'Too many requests. Please wait {wait} seconds and try again.'})
     return await call_next(request)
 
 def _consume_ai(units:int=1):

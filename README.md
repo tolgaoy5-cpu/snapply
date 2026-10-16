@@ -92,7 +92,7 @@ Your data lives in `~/.job-copilot/` (profile, saved CV, saved answers, referees
 ./run_tests.sh
 ```
 
-24 regression suites (Node and Python) use mocks, synthetic data and temporary data directories:
+26 regression suites (Node and Python) use mocks, synthetic data and temporary data directories:
 Workday date commit and multiselect detection, question matching and sensitivity classes,
 saved answers and referee persistence, TRAC referee capture/fill, field-rule word boundaries,
 requirement extraction, the AI grounding check, and the cover letter review/attach flow, cloud accounts (sign-in, isolation, quotas, Stripe
