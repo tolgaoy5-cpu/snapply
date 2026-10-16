@@ -5,7 +5,9 @@
   {name:'LEVER',host:/(^|\.)lever\.co$/i,markers:['form[action*="lever.co"]','iframe[src*="lever.co"]']},
   {name:'ASHBY',host:/(^|\.)ashbyhq\.com$/i,markers:['form[action*="ashbyhq.com"]','iframe[src*="ashbyhq.com"]']},
   {name:'CIPHR',host:/(^|\.)ciphr-irecruit\.com$/i,markers:[]},
-  {name:'TRAC',host:/(^|\.)trac\.jobs$/i,markers:[]}
+  {name:'TRAC',host:/(^|\.)trac\.jobs$/i,markers:[]},
+  // Lumesse/Cornerstone TalentLink: own host, or embedded on employers' sites (UCL, councils, NHS trusts).
+  {name:'TALENTLINK',host:/(^|\.)lumessetalentlink\.com$/i,markers:['[data-apply-msg-key]','.apply-answer-row','iframe[src*="lumessetalentlink.com"]','script[src*="lumessetalentlink.com"]']}
  ];
  function detect(doc=document,loc=location){
    const host=String(loc.hostname||'');

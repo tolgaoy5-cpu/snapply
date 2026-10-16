@@ -4,8 +4,14 @@
 (function(){
   if(window.top!==window||window.__JC_INPAGE_PANEL)return;
   window.__JC_INPAGE_PANEL=true;
-  const ats=window.JobCopilotAdapterRegistry?.detect?.(document,location)||'GENERIC';
-  if(ats==='GENERIC')return;
+  const detectNow=()=>window.JobCopilotAdapterRegistry?.detect?.(document,location)||'GENERIC';
+  let tries=0;
+  (function waitForForm(){
+    const found=detectNow();
+    if(found!=='GENERIC')return openPanel(found);
+    if(++tries<15)setTimeout(waitForForm,1000);
+  })();
+  function openPanel(ats){
 
   // Closing hides the panel for this page only; the next job or application opens it again.
   const CLOSED_KEY='jcPanelClosed:'+location.hostname+location.pathname;
@@ -107,4 +113,5 @@
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='JC_PANEL_TOGGLE'){panel.classList.contains('open')?close():open();send({ok:true})}
   });
+}
 })();
