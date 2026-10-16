@@ -144,7 +144,8 @@ steps = """await (async()=>{
   const yn=q.find(x=>x.control==='pressed_buttons');
   const r=yn?await call('FILL_QUESTION',{qid:yn.qid,value:'Yes'}):null;
   const after=(await call('PAGE_QUESTIONS',{})).questions.find(x=>x.control==='pressed_buttons');
-  return {q:q.map(x=>[x.control,x.label,x.options]),r,after:after&&after.value};
+  const sl=q.find(x=>x.control==='range');const rs=await call('FILL_QUESTION',{qid:sl.qid,value:'3 years'});
+  return {q:q.map(x=>[x.control,x.label,x.options]),r,after:after&&after.value,rs,slider:document.getElementById('candidate_answers_attributes_1_range').value};
 })()"""
 a = run('ashby_form.html', steps)
 assert a['byName']['_systemfield_name'] == 'Sam Taylor' and a['byName']['_systemfield_email'] == 'sam@example.com' and a['byName']['3991'] == 'https://www.linkedin.com/in/sam-taylor', a['byName']
@@ -153,5 +154,8 @@ yn = qs['Are you based in London or within a commutable distance of the office?'
 assert yn[0] == 'pressed_buttons' and yn[2] == ['Yes', 'No'] and a['extra']['r']['ok'] and a['extra']['after'] == 'Yes', a['extra']
 sd = qs['What is your preferred start date?']
 assert sd[0] == 'checkbox_group' and sd[2] == ['Monday, November 9th', 'Monday, November 26th'], sd
-print('Ashby form ok')
+sl = [x for x in a['extra']['q'] if x[0] == 'range'][0]
+assert sl[1].startswith('How many years of sales exp') and sl[2][:3] == ['0', '1', '2'] and sl[2][-1] == '10', sl
+assert a['extra']['rs']['ok'] and a['extra']['slider'] == '3', a['extra']
+print('Ashby form ok (and Teamtailor slider)')
 

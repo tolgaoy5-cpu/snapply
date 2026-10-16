@@ -93,6 +93,8 @@ function containerLabelPQ(el){
           add({qid:el.id,el,label:stripStar(own),kind:'choice',control:'react_select',required:el.getAttribute('aria-required')==='true'||/\*/.test(own)});
           continue;
         }
+        // Sliders ("How many years of experience?", Teamtailor): a choice between their whole steps.
+        if(el.tagName==='INPUT'&&el.type==='range'){add({qid:el.id||el.name,el,label:stripStar(label),kind:'choice',control:'range',required:el.required||isRequiredText(label)});continue}
         if(el.tagName==='SELECT')add({qid:el.id||el.name,el,label:stripStar(label),kind:'choice',control:'select',required:el.required||el.getAttribute('aria-required')==='true'||isRequiredText(label)});
         else if(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&/^(text|number|)$/.test(el.type)&&(el.id||el.name)))
           add({qid:el.id||el.name,el,label:stripStar(label),kind:'text',control:'text',required:el.required||el.getAttribute('aria-required')==='true'||/\*/.test(label)});
@@ -154,6 +156,11 @@ function containerLabelPQ(el){
     }
     return out;
   }
+  function rangeOptions(el){
+    const min=Number(el.min||0),max=Number(el.max||100),step=Number(el.step||1)||1;
+    if(!(max>min)||(max-min)/step>30)return [];
+    const out=[];for(let v=min;v<=max+1e-9;v+=step)out.push(String(Math.round(v*100)/100));return out;
+  }
   function ariaText(el){
     const ids=String(el.getAttribute('aria-labelledby')||'').split(/\s+/).filter(Boolean);
     const t=ids.map(id=>document.getElementById(id)?.innerText||'').join(' ');
@@ -180,6 +187,7 @@ function containerLabelPQ(el){
     if(c.control==='select'){const o=c.el.selectedOptions?.[0];return o&&o.value!==''&&!EMPTY.test(clean(o.text))?clean(o.text):''}
     if(c.control==='radio'){const r=c.radios.find(x=>x.checked);return r?radioLabel(r):''}
     if(c.control==='aria_radio'){const o=c.options.find(ariaChecked);return o?ariaText(o):''}
+    if(c.control==='range')return c.el.dataset.snapplySet?String(c.el.value):'';
     if(c.control==='pressed_buttons'){const o=c.options.find(x=>x.getAttribute('aria-pressed')==='true');return o?clean(o.innerText):''}
     if(c.control==='checkbox_group')return c.radios.filter(x=>x.checked).map(radioLabel).join(', ');
     if(c.control==='aria_checkbox')return c.options.filter(ariaChecked).map(ariaText).join(', ');
@@ -212,7 +220,7 @@ function containerLabelPQ(el){
       value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
       max_length:c.el&&c.el.maxLength>0?c.el.maxLength:null,multiline:!!(c.el&&c.el.tagName==='TEXTAREA'),
       options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
-        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):c.control==='pressed_buttons'?c.options.map(o=>clean(o.innerText)):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
+        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):c.control==='pressed_buttons'?c.options.map(o=>clean(o.innerText)):c.control==='range'?rangeOptions(c.el):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
   }
 
   // Workday dropdown options only exist while the list is open: open, read, close. No option is clicked.
@@ -263,6 +271,11 @@ function containerLabelPQ(el){
         const r=c.radios.find(x=>norm(radioLabel(x))===norm(wanted));
         if(!r)return {ok:false,reason:'That option is not offered here.'};
         r.click();
+      }else if(c.control==='range'){
+        const v=String(wanted).match(/\d+(?:\.\d+)?/)?.[0];
+        if(v==null||!rangeOptions(c.el).includes(v))return {ok:false,reason:'Choose one of the values on the slider.'};
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(c.el,v);
+        c.el.dataset.snapplySet='1';c.el.dispatchEvent(new Event('input',{bubbles:true}));c.el.dispatchEvent(new Event('change',{bubbles:true}));
       }else if(c.control==='pressed_buttons'){
         const o=c.options.find(x=>norm(clean(x.innerText))===norm(wanted));
         if(!o)return {ok:false,reason:'That option is not offered here.'};
@@ -300,7 +313,8 @@ function containerLabelPQ(el){
     }catch(e){return {ok:false,reason:String(e?.message||e).slice(0,120)}}
     await sleep(120);
     const now=currentValue(find(qid)||c);
-    const ok=c.kind==='choice'?norm(now)===norm(wanted):now===wanted;
+    const target=c.control==='range'?(String(wanted).match(/\d+(?:\.\d+)?/)||[''])[0]:wanted;
+    const ok=c.kind==='choice'?norm(now)===norm(target):now===target;
     return ok?{ok:true,value:now}:{ok:false,reason:'The page did not keep the answer.',value:now};
   }
 
