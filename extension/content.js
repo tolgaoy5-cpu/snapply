@@ -724,7 +724,8 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
 (function(){
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='UNKNOWN_FIELDS'){
-      const fields=semanticElements().filter(el=>!['hidden','file','password','submit','button','search'].includes(el.type)).map(el=>{
+      // Radio buttons and checkboxes are answers to questions (asked in the panel), not fields to map.
+      const fields=semanticElements().filter(el=>!['hidden','file','password','submit','button','search','radio','checkbox'].includes(el.type)).map(el=>{
         const label=textFor(el);
         if(canonical(label,el)!=='unknown')return null;
         return {sig:fieldSig(el,label),label:label.slice(0,300),tag:el.tagName.toLowerCase(),type:el.type||'',name:el.getAttribute('name')||'',

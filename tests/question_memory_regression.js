@@ -63,3 +63,5 @@ for(const t of ['Yes','No','Please select this if you agree'])assert.ok(!EMPTY.t
 const content=fs.readFileSync(__dirname+'/../extension/content.js','utf8');
 assert.ok(/gmrow\|grrow/.test(content)&&/referee\|reference\|next of kin/.test(content),'fill() must skip referee and history rows');
 console.log('Question memory matching regression passed');
+// Age is personal data (Lever EEO survey, 2026-10-16).
+assert.strictEqual(Q.sensitivity('What age are you?'), 'sensitive');
