@@ -470,6 +470,11 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     const visible=semanticElements().filter(el=>el.tagName==='INPUT'&&el.type==='file')
       .filter(el=>canonical(textFor(el),el)==='resume' || /resume|cv|curriculum vitae/i.test(textFor(el)));
     if(visible.length)return visible;
+    // Drag-and-drop upload areas (TalentLink and others) keep a hidden file input whose id names
+    // the CV slot ("upload_attached_resume_13") while the visible label just says "upload file".
+    const named=[...document.querySelectorAll('input[type="file"]')]
+      .filter(el=>/(^|[_-])(attached[_-])?resume|(^|[_-])cv([_-]|$)|curriculum/i.test(`${el.id} ${el.name} ${el.className}`)&&!/cover/i.test(`${el.id} ${el.name}`));
+    if(named.length===1)return named;
     // Workday's visible Resume/Cover Letter drop zone uses one display:none
     // file input as its actual React change target. Require that exact structure
     // and a unique file input before assigning a user-requested saved CV.
