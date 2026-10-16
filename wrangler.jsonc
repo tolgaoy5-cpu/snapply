@@ -3,7 +3,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "snapply",
   "compatibility_date": "2026-10-12",
-  "assets": { "directory": "site", "html_handling": "auto-trailing-slash" },
+  "assets": { "directory": "site", "html_handling": "auto-trailing-slash", "not_found_handling": "404-page" },
   "routes": [
     { "pattern": "snapply.co.uk", "custom_domain": true },
     { "pattern": "www.snapply.co.uk", "custom_domain": true }
