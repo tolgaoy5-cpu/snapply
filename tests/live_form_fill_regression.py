@@ -86,3 +86,21 @@ assert u['unknown'] == ['ZIP / Postal', 'Shoe size'], u['unknown']
 assert u['after']['f7'] == 'E5 9PB' and u['after']['f9'] == '', u  # a hint outside the allowed keys is ignored
 print('AI field map fill ok')
 
+# ARIA radio/checkbox groups (hidden inputs, role="radio" options): listed with options, marked
+# sensitive, and filled by clicking the option.
+steps = """await (async()=>{
+  const q=(await call('PAGE_QUESTIONS',{})).questions.filter(x=>/^aria:/.test(x.qid));
+  const eth=q.find(x=>/ethnic/i.test(x.label)),care=q.find(x=>/caring/i.test(x.label));
+  const r1=await call('FILL_QUESTION',{qid:eth.qid,value:'Asian or Asian British'});
+  const r2=await call('FILL_QUESTION',{qid:care.qid,value:'Primary carer of a child, Primary carer of an adult'});
+  const after=(await call('PAGE_QUESTIONS',{})).questions.filter(x=>/^aria:/.test(x.qid)).map(x=>[x.label,x.value]);
+  return {q:q.map(x=>({label:x.label,options:x.options,sensitivity:x.sensitivity,required:x.required,kind:x.kind})),r1,r2,after};
+})()"""
+a = run('ucl_talentlink_form.html', steps)['extra']
+eth = [x for x in a['q'] if 'ethnic' in x['label']][0]
+assert eth['options'] == ['Arab', 'Asian or Asian British', 'I prefer not to say'] and eth['sensitivity'] == 'sensitive' and eth['required'], eth
+assert a['r1'].get('ok') and a['r2'].get('ok'), (a['r1'], a['r2'])
+assert dict(a['after'])[eth['label']] == 'Asian or Asian British'
+assert [v for l, v in a['after'] if 'caring' in l][0] == 'Primary carer of a child, Primary carer of an adult'
+print('ARIA groups ok')
+

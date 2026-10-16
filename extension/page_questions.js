@@ -99,8 +99,26 @@
       if(!isWorkday()&&PROFILE_KEYS.has(canonical(label,radios[0]))&&!isQuestionSentence(label))continue;
       add({qid:'radio:'+name,el:radios[0],radios,label:stripStar(label),kind:'choice',control:'radio',required:isRequiredText(label)||radios.some(r=>r.required||r.getAttribute('aria-required')==='true')});
     }
+    // ARIA radio/checkbox groups (TalentLink and other custom widgets): the real inputs are hidden and
+    // the visible options are role="radio"/"checkbox" elements labelled through aria-labelledby.
+    for(const g of document.querySelectorAll('[role="radiogroup"],[role="group"]')){
+      if(!visible(g))continue;
+      const role=g.getAttribute('role')==='radiogroup'?'radio':'checkbox';
+      const opts=[...g.querySelectorAll(`[role="${role}"]`)].filter(visible);
+      if(opts.length<2||opts.every(o=>o.matches('input')))continue;
+      const label=ariaText(g)||groupLabel(opts[0]);if(!label)continue;
+      const qid='aria:'+(g.id||g.getAttribute('aria-labelledby')||clean(label).slice(0,60));
+      add({qid,el:g,options:opts,label:stripStar(label),kind:'choice',control:role==='radio'?'aria_radio':'aria_checkbox',
+        required:g.getAttribute('aria-required')==='true'||isRequiredText(label)});
+    }
     return out;
   }
+  function ariaText(el){
+    const ids=String(el.getAttribute('aria-labelledby')||'').split(/\s+/).filter(Boolean);
+    const t=ids.map(id=>document.getElementById(id)?.innerText||'').join(' ');
+    return clean(t||el.getAttribute('aria-label')||el.innerText||'').replace(/\(required\)/i,'').trim();
+  }
+  const ariaChecked=o=>o.getAttribute('aria-checked')==='true'||!!o.querySelector('input:checked');
   function radioLabel(r){return clean(document.querySelector(`label[for="${CSS.escape(r.id||'')}"]`)?.innerText||r.closest('label')?.innerText||r.value)}
   // Controls Snapply can read and remember but does not fill yet.
   const READ_ONLY=new Set(['workday_date','workday_multiselect']);
@@ -120,6 +138,8 @@
     }
     if(c.control==='select'){const o=c.el.selectedOptions?.[0];return o&&o.value!==''&&!EMPTY.test(clean(o.text))?clean(o.text):''}
     if(c.control==='radio'){const r=c.radios.find(x=>x.checked);return r?radioLabel(r):''}
+    if(c.control==='aria_radio'){const o=c.options.find(ariaChecked);return o?ariaText(o):''}
+    if(c.control==='aria_checkbox')return c.options.filter(ariaChecked).map(ariaText).join(', ');
     return String(c.el.value||'').trim();
   }
   function find(qid){return controls().find(c=>c.qid===qid)}
@@ -149,7 +169,7 @@
       value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
       max_length:c.el&&c.el.maxLength>0?c.el.maxLength:null,multiline:!!(c.el&&c.el.tagName==='TEXTAREA'),
       options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
-        :c.control==='radio'?c.radios.map(radioLabel):null}));
+        :c.control==='radio'?c.radios.map(radioLabel):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
   }
 
   // Workday dropdown options only exist while the list is open: open, read, close. No option is clicked.
@@ -200,6 +220,16 @@
         const r=c.radios.find(x=>norm(radioLabel(x))===norm(wanted));
         if(!r)return {ok:false,reason:'That option is not offered here.'};
         r.click();
+      }else if(c.control==='aria_radio'||c.control==='aria_checkbox'){
+        const want=c.control==='aria_radio'?[wanted]:String(wanted).split(/\s*,\s*/);
+        for(const w of want){
+          const o=c.options.find(x=>norm(ariaText(x))===norm(w));
+          if(!o)return {ok:false,reason:`“${w}” is not offered here.`};
+          if(ariaChecked(o))continue;
+          o.click();
+          // Some widgets only react to their hidden input.
+          if(!ariaChecked(o)){const inp=o.querySelector('input');if(inp){inp.click();if(!inp.checked){inp.checked=true;inp.dispatchEvent(new Event('change',{bubbles:true}))}}}
+        }
       }else setText(c.el,wanted);
     }catch(e){return {ok:false,reason:String(e?.message||e).slice(0,120)}}
     await sleep(120);
