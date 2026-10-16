@@ -93,5 +93,7 @@ def analyze_job(payload: dict) -> dict:
         "url": payload.get("url") or "",
         "requirements": reqs,
         "requirement_count": len(reqs),
+        # The advert text itself, so letters can refer to what the employer actually says.
+        "description": re.sub(r"\s+\n", "\n", str(payload.get("text") or ""))[:8000],
         "source": "active_page_text",
     }

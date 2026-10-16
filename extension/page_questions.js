@@ -147,6 +147,7 @@
   function questions(){
     return withContext(controls()).map(c=>({qid:c.qid,label:c.label,kind:c.kind,control:c.control,required:c.required,
       value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
+      max_length:c.el&&c.el.maxLength>0?c.el.maxLength:null,multiline:!!(c.el&&c.el.tagName==='TEXTAREA'),
       options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
         :c.control==='radio'?c.radios.map(radioLabel):null}));
   }

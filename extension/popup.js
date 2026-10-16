@@ -268,15 +268,19 @@ function askCard(q){
   const draft=draftable?el('button',{textContent:'Draft with AI'}):null;
   if(draft)draft.onclick=async()=>{try{
     draft.disabled=true;status.className='muted';status.textContent='Drafting from your CV and the job requirements…';
-    const job=await currentJob();
+    // The saved advert for this application, or the job text on this page (simple one-page forms).
+    let job=await currentJob();
+    if(!job?.requirements?.length){
+      try{const cur=await resolveCurrentJob();job=cur.job;if(job?.requirement_count&&!cur.capture.error)await chrome.storage.local.set({currentJob:job})}catch(_){}
+    }
     if(!job?.requirements?.length)throw new Error('Open the job advert and press “Read job description” first, then come back to this page.');
-    const r=await window.JobCopilotAPI.post('/v1/answers/generate',{question:q.label,profile:await profile(),job});
+    const r=await window.JobCopilotAPI.post('/v1/answers/generate',{question:q.label,profile:await profile(),job,character_limit:q.max_length||null});
     if(r.status==='ASK_USER'||!r.answer)throw new Error('Your CV has no evidence that matches this question. Please write it yourself.');
-    control.value=r.answer;remember.checked=false;
+    control.value=r.answer;remember.checked=false;if(r.letter){control.rows=16;control.style.minHeight='260px'}
     const claims=[...(r.validation?.unsupported_claims||[])];
     status.className=claims.length?'ask':'muted';
     const removedN=(r.removed_sentences||[]).length;
-    status.textContent=`AI draft for “${job.title||'the saved job'}”, written only from your CV — check it and edit before filling.${removedN?` ${removedN} sentence${removedN>1?'s':''} that went beyond your CV ${removedN>1?'were':'was'} trimmed or removed.`:''}${claims.length?` Not supported by your CV: ${claims.join('; ')}`:''}`;
+    status.textContent=`${r.letter?`Tailored letter (${r.word_count} words)`:'AI draft'} for “${job.title||'the saved job'}”, written only from your CV and the advert — check it and edit before filling.${removedN?` ${removedN} sentence${removedN>1?'s':''} that went beyond your CV ${removedN>1?'were':'was'} trimmed or removed.`:''}${claims.length?` Not supported by your CV: ${claims.join('; ')}`:''}`;
   }catch(e){status.className='block';status.textContent=e.message}finally{draft.disabled=false}};
   return el('div',{className:'ask-card'},[
     el('div',{textContent:q.label}),
@@ -619,7 +623,8 @@ async function generateCoverLetter(transferable=false){try{
   byId('coverLetterState').textContent=transferable?'Writing from the transferable experience in your CV…':'Analyzing the current job and checking verified CV evidence…';
   const {capture,job}=await resolveCurrentJob();
   if(!job.requirement_count)throw new Error('No job requirements found on this page. Open the job description first.');
-  const draft=await window.JobCopilotAPI.post('/v1/cover-letter/generate',{job,transferable});
+  const length=byId('coverLetterLength')?.value||'standard';
+  const draft=await window.JobCopilotAPI.post('/v1/cover-letter/generate',{job,transferable,length});
   if(draft.status!=='REVIEW'){
     byId('coverLetterBody').value='';
     byId('coverLetterState').replaceChildren((draft.reason||'Could not generate a cover letter.')+' You can still write your own letter in the box and press Validate + Attach.');

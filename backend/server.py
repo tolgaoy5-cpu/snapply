@@ -19,6 +19,8 @@ from cover_letter import generate as generate_cover_letter, render as render_cov
 from origin_policy import ALLOWED_ORIGIN, origin_allowed
 import accounts
 import billing
+import letter_writer
+import re
 
 app=FastAPI(title='Snapply Core API',version='0.27.0')
 app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_ORIGIN,
@@ -72,6 +74,7 @@ class AnswerBatchRequest(BaseModel):
 class CoverLetterRequest(BaseModel):
     job:dict[str,Any]
     transferable:bool=False
+    length:str=Field(default='standard',pattern='^(standard|detailed)$')
 
 class CoverLetterRenderRequest(BaseModel):
     job:dict[str,Any]
@@ -87,7 +90,7 @@ def cover_letter_generate(r:CoverLetterRequest):
     profile=_refresh_profile_from_saved_cv_if_needed().get('master_profile') or {}
     _consume_ai()
     try:
-        return generate_cover_letter(profile,r.job,transferable=r.transferable)
+        return generate_cover_letter(profile,r.job,transferable=r.transferable,length=r.length)
     except ProviderError as e:
         raise HTTPException(status_code=502,detail=f'Model provider error: {e}') from e
 
@@ -96,7 +99,31 @@ def cover_letter_render(r:CoverLetterRenderRequest):
     profile=_refresh_profile_from_saved_cv_if_needed().get('master_profile') or {}
     return render_cover_letter(profile,r.job,r.body,r.format,r.own)
 
+def _generate_letter_answer(r:AnswerRequest)->dict[str,Any]:
+    # Cover-letter and motivation questions get a full, tailored letter written from the CV and the advert.
+    uid=accounts.current_uid.get()
+    if uid is not None and re.search(r'cover|covering',r.question,re.I) and accounts.plan_of(accounts.load_account(uid))!='pro':
+        raise HTTPException(status_code=402,detail='Cover letters are part of Snapply Pro. Upgrade to Pro to generate them.')
+    _consume_ai()
+    try:
+        long_field=not r.character_limit or r.character_limit>=3000
+        written=letter_writer.write_letter(r.profile,r.job,length='detailed' if long_field and re.search(r'supporting|statement',r.question,re.I) else 'standard',
+                                           character_limit=r.character_limit,question=r.question)
+    except ProviderError as e:
+        raise HTTPException(status_code=502,detail=f'Model provider error: {e}')
+    if written['status']!='REVIEW':
+        return {'status':'ASK_USER','answer':'','insert_allowed':False,'validation':{'valid':False,'reason':written['reason']}}
+    cover=bool(re.search(r'cover|covering',r.question,re.I))
+    answer=letter_writer.full_letter(written['body'],r.profile,r.job) if cover else written['body']
+    if r.character_limit and len(answer)>r.character_limit:
+        answer=written['body']
+    return {'status':'REVIEW','answer':answer,'insert_allowed':True,'letter':True,'word_count':written['word_count'],
+            'removed_sentences':written['removed_sentences'],'validation':{'valid':True,'unsupported_claims':[]},
+            'provider':'openai-letter'}
+
 def _generate_one(r:AnswerRequest)->dict[str,Any]:
+    if letter_writer.is_letter_question(r.question) and (r.job.get('requirements') or r.job.get('description')):
+        return _generate_letter_answer(r)
     plan=plan_question(r.question,r.profile,r.job,r.character_limit)
     allowed=[]
     for m in plan.get('matched_requirements',[]):

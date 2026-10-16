@@ -19,7 +19,10 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
 from claim_validator import validate_answer, grounded_rewrite
 from evidence_matcher import SYNONYMS, blob, completed_certifications, match_job, tokens
-from llm_provider import model_configured, rewrite
+from llm_provider import ProviderError, model_configured, rewrite
+import letter_writer
+
+LETTER_LIMIT = 6500  # characters; a detailed letter is ~800 words
 
 
 def _evidence(profile: dict, job: dict) -> tuple[list[str], list[str]]:
@@ -105,7 +108,7 @@ def _readable_cv_evidence(profile: dict) -> list[str]:
 RELEVANCE_REASON = 'No sufficiently relevant verified CV evidence for this job. Choose a matching role or review manually.'
 
 
-def generate(profile: dict, job: dict, model_rewrite: Callable = rewrite, transferable: bool = False) -> dict[str, Any]:
+def generate(profile: dict, job: dict, model_rewrite: Callable = rewrite, transferable: bool = False, length: str = 'standard') -> dict[str, Any]:
     allowed, unsupported, reason = _ready(profile, job)
     # A job outside the CV's field: only on the user's request, write from transferable experience,
     # still using only CV facts and never claiming the job's criteria are met.
@@ -119,55 +122,29 @@ def generate(profile: dict, job: dict, model_rewrite: Callable = rewrite, transf
         return {'status': 'MODEL_NOT_CONFIGURED', 'reason': 'Configure OPENAI_API_KEY and JOB_COPILOT_MODEL on the local backend to generate a job-specific cover letter.', 'attachment_ready': False}
     title = str(job['title']).strip()
     company = str(job.get('company') or '').strip()
-    question = (
-        f'Write only evidence-rich body paragraphs of a concise, tailored cover letter for the {title} role'
-        + (f' at {company}' if company else '')
-        + '. Use only the verified evidence in this plan. Do not assert that unmet criteria are met. '
-          'Do not include an address, date, greeting, generic introduction or sign-off; the document renderer adds those. '
-          'Each sentence must describe a supported experience or qualification; omit generic closing sentences.'
-    )
-    if mode == 'transferable':
-        question = (
-            f'Write two short body paragraphs of an honest cover letter for the {title} role'
-            + (f' at {company}' if company else '')
-            + ". The candidate's background is in a different field. Using only the CV evidence, describe experience that "
-              'transfers to this role (for example working with people, communication, organisation, languages). '
-              'Do not claim experience, skills, tools or results the evidence does not state, and do not say the job '
-              'requirements are met. Do not include a greeting or sign-off.'
-        )
-    plan = {
-        'cv_evidence': allowed,
-        'job_requirements_for_context_only': unsupported,
-    } if mode == 'transferable' else {
-        'matched_requirements': match_job(job, profile),
-        'generation_rules': [
-            'Write in first person and use only the supplied verified evidence.',
-            'Do not invent qualifications, employers, dates, metrics or clinical skills.',
-            'Write two or three evidence-rich paragraphs, staying below 3500 characters.',
-            'If a criterion has no evidence, omit that claim.',
-            'Mention every certificate or qualification in the evidence that matches a requirement.',
-        ],
-    }
-    context = f'{title} {company}'
-    drafted = grounded_rewrite(model_rewrite, question, plan, 3500, allowed, context)
-    if drafted.get('provider') == 'deterministic-fallback':
-        return {'status': 'MODEL_NOT_CONFIGURED', 'reason': 'AI generation did not run.', 'attachment_ready': False}
-    body = str(drafted.get('answer') or '').strip()
-    validation = validate_answer(body, allowed, 3500, context)
-    if body and mode == 'matched' and not _body_mentions_job(body, job):
-        validation['valid'] = False
-        validation['job_focus_warning'] = 'Draft does not address the occupation in this job title.'
-    if drafted.get('unsupported_claims'):
-        validation['valid'] = False
-        validation['unsupported_claims'] = list(dict.fromkeys(validation['unsupported_claims'] + drafted['unsupported_claims']))
+    try:
+        written = letter_writer.write_letter(profile, job, length=length, transferable=mode == 'transferable')
+    except ProviderError:
+        raise
+    if written['status'] != 'REVIEW':
+        return {'status': 'ASK_USER', 'reason': written['reason'], 'attachment_ready': False,
+                'can_draft_transferable': mode == 'matched'}
+    body = written['body']
+    validation = validate_answer(body, letter_writer.cv_evidence(profile) + letter_writer.job_evidence(job), LETTER_LIMIT,
+                                 f'{title} {company}')
+    # Letter sentences were already checked by kind (CV / advert / courtesy); here only the hard
+    # risks (numbers, credentials, qualifications) and the job focus can block attaching.
+    hard = [c['sentence'] for c in validation['claims'] if not c.get('risk_ok', True)]
+    focus_ok = mode != 'matched' or _body_mentions_job(body, job)
     return {
-        'status': 'REVIEW', 'body': body, 'validation': validation,
-        'attachment_ready': bool(body and validation['valid']),
+        'status': 'REVIEW', 'body': body, 'validation': {**validation, 'valid': not hard and focus_ok, 'unsupported_claims': hard},
+        'attachment_ready': bool(body and not hard and focus_ok),
         'unsupported_requirements': unsupported,
-        'removed_sentences': drafted.get('removed_sentences', []),
+        'removed_sentences': written['removed_sentences'],
+        'word_count': written['word_count'],
         'mode': mode,
         'job': {'title': title, 'company': company, 'url': job['url']},
-        'provider': drafted.get('provider'),
+        'provider': 'openai-letter',
     }
 
 
@@ -187,13 +164,14 @@ def render(profile: dict, job: dict, body: str, format: str = 'pdf', own: bool =
             return {'ok': False, 'reason': 'Open the job posting so the letter can be addressed to this job.'}
         allowed = _all_cv_evidence(profile)
     else:
-        allowed, _, reason = _ready(profile, job)
+        _, _, reason = _ready(profile, job)
         if reason:
             return {'ok': False, 'reason': reason}
+        allowed = letter_writer.cv_evidence(profile) + letter_writer.job_evidence(job)
     body = body.strip()
     if not body:
         return {'ok': False, 'reason': 'Cover letter text is empty.'}
-    validation = validate_answer(body, allowed, 3500, f"{job.get('title') or ''} {job.get('company') or ''}")
+    validation = validate_answer(body, allowed, LETTER_LIMIT, f"{job.get('title') or ''} {job.get('company') or ''}")
     if not own and not _body_mentions_job(body, job):
         validation['valid'] = False
         validation['job_focus_warning'] = 'Draft does not address the occupation in this job title.'
@@ -209,8 +187,13 @@ def render(profile: dict, job: dict, body: str, format: str = 'pdf', own: bool =
     title = str(job['title']).strip()
     company = str(job.get('company') or '').strip()
     heading = f'Re: {title}' + (f' - {company}' if company else '')
-    intro = f'I am applying for the {title} role' + (f' at {company}.' if company else '.')
     paragraphs = [p.strip() for p in re.split(r'\n\s*\n', body) if p.strip()]
+    # Letters may already carry a greeting and sign-off (pasted text-box versions); keep one of each.
+    if paragraphs and re.match(r'(?i)^dear\b', paragraphs[0]):
+        paragraphs = paragraphs[1:]
+    while paragraphs and re.match(r'(?i)^(yours|kind regards|best regards|sincerely)\b', paragraphs[-1]):
+        paragraphs = paragraphs[:-1]
+    greeting = f'Dear {company} Hiring Team,' if company else 'Dear Hiring Manager,'
     stream = io.BytesIO()
     if format == 'pdf':
         font_path = Path(__file__).parent / 'assets' / 'DejaVuSans.ttf'
@@ -224,14 +207,14 @@ def render(profile: dict, job: dict, body: str, format: str = 'pdf', own: bool =
                                      topMargin=55, bottomMargin=55, title=f'Cover Letter - {title}')
         story = [Paragraph(escape(name), name_style), Paragraph(date.today().strftime('%d %B %Y'), normal),
                  Spacer(1, 8), Paragraph(escape(heading), normal), Spacer(1, 8),
-                 Paragraph('Dear Hiring Team,', normal), Paragraph(escape(intro), normal)]
+                 Paragraph(escape(greeting), normal)]
         story.extend(Paragraph(escape(p).replace('\n', '<br/>'), normal) for p in paragraphs)
         story.extend([Spacer(1, 8), Paragraph('Yours sincerely,', normal), Paragraph(escape(name), normal)])
         document.build(story)
         mime = 'application/pdf'
     else:
         doc = Document()
-        for p in [name, date.today().strftime('%d %B %Y'), heading, 'Dear Hiring Team,', intro,
+        for p in [name, date.today().strftime('%d %B %Y'), heading, greeting,
                   *paragraphs, 'Yours sincerely,', name]:
             doc.add_paragraph(p)
         doc.save(stream)
