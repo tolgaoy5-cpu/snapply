@@ -381,8 +381,12 @@ byId('fillAllSafe').onclick=async()=>{try{
   const attached=await attachEverything();
   const memory=await window.JobCopilotMemory.getAll();
   const options=await send('FILL_CONFIRMED_OPTIONS',{memory});
-  const answers=await answerQuestions();
-  const required=await send('REQUIRED_FIELD_STATUS',{profile:p});
+  let answers=await answerQuestions();
+  let required=await send('REQUIRED_FIELD_STATUS',{profile:p});
+  // Filling can reveal conditional questions ("If no, give details…", "Where did you see it online?").
+  // Scan once more so they get answer cards in the panel too.
+  const unseen=r=>(r.items||[]).some(x=>x.status!=='COMPLETE'&&!PROFILE_ASK[x.canonical]&&!answers.askedIds.has(x.id)&&!answers.askedIds.has('radio:'+x.name));
+  if(unseen(required)){await new Promise(res=>setTimeout(res,400));answers=await answerQuestions();required=await send('REQUIRED_FIELD_STATUS',{profile:p})}
   byId('requiredState').textContent=required.missing_count?`${required.missing_count} required fields still need attention.`:'All detected required fields are complete.';
   const filledNow=(deterministic?.results||[]).filter(x=>x.filled).length;
   byId('summary').textContent=!section&&!answers.ask&&!answers.filled&&!filledNow&&!required.missing_count
@@ -390,6 +394,7 @@ byId('fillAllSafe').onclick=async()=>{try{
     :`${sectionNote}Filled · ${required.filled_required}/${required.required_total} required complete${attached.note}${answers.filled?` · ${answers.filled} from saved answers`:''}${answers.ask?` · ${answers.ask} need your answer`:''}`;
   // Questions listed under "Your input is needed" are not repeated as generic cards.
   cards(required.items.filter(x=>x.status!=='COMPLETE'&&!answers.askedIds.has(x.id)&&!answers.askedIds.has('radio:'+x.name)));
+  await renderDocumentAsks();
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
   // Bring what needs the user into view: their questions first, otherwise the review results.
   (answers.ask||answers.optional?byId('askTitle'):byId('askState').textContent?byId('askState'):byId('requiredState')).scrollIntoView({behavior:'smooth',block:'start'});
@@ -755,3 +760,25 @@ byId('docAdd')&&(byId('docAdd').onclick=async()=>{
   catch(e){st.textContent=e.message}
 });
 renderDocuments();
+
+// Upload areas on this page with no matching saved document: offer to add one here, once.
+async function renderDocumentAsks(){
+  const slots=(await send('DOCUMENT_SLOTS').catch(()=>null))?.details||[];
+  const docs=await window.SnapplyDocumentLibrary.list();
+  const L=window.SnapplyDocumentLibrary.LABELS;
+  const root=byId('cards');
+  for(const slot of slots){
+    if(slot.filled||!L[slot.category]||docs.some(d=>d.category===slot.category))continue;
+    const file=el('input',{type:'file'});
+    const st=el('div',{className:'muted',textContent:`Optional · add your ${L[slot.category].toLowerCase()} once and Snapply attaches it to every application that asks for it.`});
+    const go=el('button',{textContent:'Add & attach'});
+    go.onclick=async()=>{try{
+      go.disabled=true;await window.SnapplyDocumentLibrary.add(file.files?.[0],slot.category);
+      const r=await send('ATTACH_DOCUMENTS',{documents:await window.SnapplyDocumentLibrary.list()});
+      const ok=(r?.results||[]).some(x=>x.ok&&x.category===slot.category);
+      st.className=ok?'done':'block';st.textContent=ok?'Attached · saved in My documents':'Saved in My documents, but this upload area did not accept it — upload it on the page.';
+      renderDocuments();
+    }catch(e){go.disabled=false;st.className='block';st.textContent=e.message}};
+    root.appendChild(el('div',{className:'ask-card'},[el('b',{textContent:slot.label||L[slot.category]}),file,el('div',{className:'row'},[go]),st]));
+  }
+}

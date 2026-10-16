@@ -686,6 +686,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
   window.SnapplyDocuments={categoryOf,attachDocuments};
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='ATTACH_DOCUMENTS'){try{send(attachDocuments(m.documents||[]))}catch(e){send({ok:false,error:e.message})}}
-    if(m.type==='DOCUMENT_SLOTS'){send({slots:[...document.querySelectorAll('input[type="file"]')].map(categoryOf)})}
+    if(m.type==='DOCUMENT_SLOTS'){const all=[...document.querySelectorAll('input[type="file"]')];
+      send({slots:all.map(categoryOf),details:all.map(el=>({category:categoryOf(el),label:headingFor(el),filled:!!el.files?.length}))})}
   });
 })();

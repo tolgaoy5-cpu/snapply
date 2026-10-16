@@ -27,10 +27,10 @@ storage:{{local:{{get:async()=>({{}}),set:async()=>{{}},remove:async()=>{{}}}}}}
 const call=(type,extra)=>new Promise(res=>{{let d=false;for(const l of window.__l)l({{type,...extra}},{{}},v=>{{if(!d){{d=true;res(v)}}}});setTimeout(()=>{{if(!d)res({{timeout:true}})}},4000)}});
 (async()=>{{const fill=await call('FILL_FORM',{{profile:{json.dumps(PROFILE)}}});
 const cv=await call('ATTACH_SAVED_CV',{{savedCV:{{name:'cv.pdf',type:'application/pdf',base64:btoa('%PDF-1.4 test')}}}});
-const slots=(await call('DOCUMENT_SLOTS',{{}})).slots;
+const slotInfo=await call('DOCUMENT_SLOTS',{{}});const slots=slotInfo.slots;
 const doc=(category,name)=>({{category,name,type:'application/pdf',base64:btoa('%PDF '+name)}});
 const docs=await call('ATTACH_DOCUMENTS',{{documents:[doc('qualifications','msc.pdf'),doc('qualifications','bsc.pdf'),doc('membership','bps.pdf'),doc('research','paper.pdf')]}});
-document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,docs,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
+document.getElementById('out').textContent=JSON.stringify({{fill,cv,slots,slotInfo,docs,files:Object.fromEntries([...document.querySelectorAll('input[type=file]')].map(e=>[e.id,[...e.files].map(f=>f.name)])),cvFiles:[...document.querySelectorAll('input[type=file]')].map(e=>e.id+':'+e.files.length),ats:window.JobCopilotAdapterRegistry.detect(document,{{hostname:'www.ucl.ac.uk'}}),values:Object.fromEntries([...document.querySelectorAll('input,select,textarea')].map(e=>[e.id,e.value]))}})}})();
 </script></body></html>'''
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / 'harness.html'
@@ -62,6 +62,7 @@ assert r['cv'].get('ok'), r['cv']
 assert r['slots'] == ['cv', 'research', 'research', 'qualifications', 'membership', 'other'], r['slots']
 f = r['files']
 assert f['upload_attached_resume_13'] == ['cv.pdf']
+assert [d['label'] for d in r['slotInfo']['details']][2:5] == ['Research Paper 2', 'Qualification Certificates', 'Professional Membership'], r['slotInfo']
 assert f['upload_research_paper_1_14'] == ['paper.pdf'] and f['upload_research_paper_2_15'] == []
 assert f['upload_qualification_certificates_16'] == ['msc.pdf'] and f['upload_professional_membership_17'] == ['bps.pdf']
 assert f['upload_otherattachment_18'] == []
