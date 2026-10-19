@@ -23,27 +23,33 @@ FILL THIS PAGE — ONE CLICK
 • Work history, education, dates, languages and contact details from your CV
 • Workday: every experience and education row, with dates the site actually accepts
 • NHS Jobs / TRAC: education and employment history, training courses you choose
-• Greenhouse: text, list and consent questions
-• Lever, Ashby and CIPHR detected, with more sites coming
+• Greenhouse, Lever, Ashby, Workable, Teamtailor and TalentLink (used by many universities and councils)
+• Other application forms: Snapply recognises the fields it can and uses AI to understand unfamiliar ones
 
 ANSWER ONCE, REUSED FOREVER
 • A new question appears in the Snapply panel with the site's own options
 • Your answer is filled and remembered — the same or a reworded question on another site is filled next time
 • Legal and personal questions (right to work, convictions, equality data) are only suggested, never filled silently
 
+YOUR DOCUMENTS, ATTACHED FOR YOU
+• Your CV is attached automatically
+• Add certificates, memberships and papers once — Snapply puts each one in the upload area made for it
+
 HONEST AI, BUILT ON YOUR CV
-• Cover letters and written answers drafted only from experience you really have
+• Cover letters and supporting statements tailored to the job advert, written only from experience you really have
 • Every sentence is checked against your CV; unsupported claims are rewritten or removed
 • Cover letters are attached to the application as PDF
 
 PRIVATE BY DESIGN
-• Legal declarations, equality data and referee details stay in your browser and never reach our servers
+• Legal declarations, equality data, referee details and your documents stay in your browser and never reach our servers
 • Snapply never presses the final submit button
 • Delete your account, CV and answers with one click
 
 PLANS
 Free: 5 applications a month, remembered answers, 3 AI drafts a month.
 Pro: unlimited applications, 300 AI drafts a month and cover letters for every application — £9.99/month (launch offer: £4.99 for the first 2 months) or £79/year.
+
+A page didn't fill properly? One click in the panel tells us, so we can fix it.
 
 Website: https://snapply.co.uk · Support: hello@snapply.co.uk
 
