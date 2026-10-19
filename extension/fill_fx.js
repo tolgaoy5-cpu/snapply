@@ -44,6 +44,9 @@
     // A form inside a frame fills there; the top page then has nothing to report.
     if (done && !count) { if (toast) toast.classList.remove('on'); return; }
     ensureToast();
+    // Centre over the page itself, not under the Snapply panel (which pushes the page left).
+    const pushed = parseFloat(getComputedStyle(document.documentElement).marginRight) || 0;
+    host.style.left = `${Math.round((innerWidth - pushed) / 2)}px`;
     const shown = Math.max(total, count);
     toast.querySelector('.msg').textContent = done
       ? `✓ ${count} field${count === 1 ? '' : 's'} filled`
