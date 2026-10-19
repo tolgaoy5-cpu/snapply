@@ -367,7 +367,7 @@ async function fillWorkdayExperiencePage(p){
   show({experience,dates,languages,required});
   byId('requiredState').scrollIntoView({behavior:'smooth',block:'start'});
 }
-byId('fillAllSafe').onclick=async()=>{try{
+byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});try{
   const p=await profile();
   const page=await send('WORKDAY_STEP').catch(()=>null);
   if(page?.workday&&/my experience/.test(page.step||''))return await fillWorkdayExperiencePage(p);
@@ -399,7 +399,7 @@ byId('fillAllSafe').onclick=async()=>{try{
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
   // Bring what needs the user into view: their questions first, otherwise the review results.
   (answers.ask||answers.optional?byId('askTitle'):byId('askState').textContent?byId('askState'):byId('requiredState')).scrollIntoView({behavior:'smooth',block:'start'});
-}catch(e){show({error:e.message})}};
+}catch(e){show({error:e.message})}finally{send('FILL_FX',{on:false}).catch(()=>{})}};
 
 byId('requiredCheck').onclick=async()=>{try{
   const d=await send('REQUIRED_FIELD_STATUS',{profile:await profile()});

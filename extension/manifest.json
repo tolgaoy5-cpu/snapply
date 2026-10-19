@@ -54,6 +54,7 @@
         "option_resolver.js",
         "inpage_debug.js",
         "question_memory.js",
+        "fill_fx.js",
         "content.js",
         "page_questions.js",
         "inpage_panel.js"
