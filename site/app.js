@@ -2,8 +2,8 @@
 // (Google sign-in -> Snapply session -> Stripe Checkout or the subscription portal).
 (function(){
   const API='https://snapply-api.fly.dev';
-  const STORE_URL='https://chromewebstore.google.com/detail/pbciplmicohoeflmnjapakibfgbmjcmb';
-  const STORE_LIVE=false; // set true once the Chrome Web Store listing is approved
+  const STORE_URL='https://chromewebstore.google.com/detail/snapply/pbciplmicohoeflmnjapakibfgbmjcmb';
+  const STORE_LIVE=true; // Chrome Web Store listing approved 2026-10-19
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
   let interval='month', intent='buy', clientId='';
 
