@@ -174,3 +174,10 @@ dialog .close{position:absolute;top:14px;right:16px;border:0;background:none;fon
 .welcome-steps li::before{counter-increment:w;content:counter(w);position:absolute;left:20px;top:18px;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-weight:800;display:grid;place-items:center}
 .welcome-steps b{display:block;font-size:17px;margin-bottom:4px}
 .welcome-steps span{color:var(--ink2);font-size:15px}
+
+#demo{padding-top:30px}
+.demo-frame{max-width:1120px;margin:36px auto 0;border-radius:18px;overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:0 40px 90px rgba(124,58,237,.18),0 8px 24px rgba(11,16,32,.08)}
+.demo-bar{display:flex;align-items:center;gap:7px;padding:11px 16px;background:#f5f6fa;border-bottom:1px solid var(--line)}
+.demo-bar i{width:11px;height:11px;border-radius:50%;background:#e2e5ee}
+.demo-bar span{margin-left:14px;font-size:13px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px 12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.demo-frame img{display:block;width:100%;height:auto}

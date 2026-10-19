@@ -13,7 +13,7 @@ Fill job applications from your CV in one click. Remembers your answers, drafts 
 **Category:** Productivity → Workflow & planning
 **Language:** English (United Kingdom)
 
-**Description:**
+**Description:** (no third-party product names: the store rejected 0.32 for "keyword spam" over a list of applicant-tracking systems)
 
 Snap. Apply. Done.
 
@@ -21,10 +21,9 @@ Snapply fills job applications from your CV, remembers every answer you give onc
 
 FILL THIS PAGE — ONE CLICK
 • Work history, education, dates, languages and contact details from your CV
-• Workday: every experience and education row, with dates the site actually accepts
-• NHS Jobs / TRAC: education and employment history, training courses you choose
-• Greenhouse, Lever, Ashby, Workable, Teamtailor and TalentLink (used by many universities and councils)
-• Other application forms: Snapply recognises the fields it can and uses AI to understand unfamiliar ones
+• Every experience and education row on multi-page applications, with dates the site actually accepts
+• Works on the application forms used by most UK employers, including NHS, university and council job sites
+• On unfamiliar forms, Snapply recognises the fields it can and uses AI to understand the rest
 
 ANSWER ONCE, REUSED FOREVER
 • A new question appears in the Snapply panel with the site's own options
