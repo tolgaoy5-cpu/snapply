@@ -102,10 +102,11 @@ with TemporaryDirectory() as td:
     assert c.post('/v1/state/answers', json={**ok, 'sensitivity': 'legal'}).status_code == 200
 print('cloud accounts ok')
 
-# Checkout picks the monthly or yearly price (Stripe call captured, not sent).
+# Checkout picks the weekly, monthly, 3-monthly (or legacy yearly) price (Stripe call captured, not sent).
 with TemporaryDirectory() as td2:
     os.environ['JOB_COPILOT_DATA_DIR'] = td2
-    os.environ.update({'STRIPE_SECRET_KEY': 'sk_test_x', 'STRIPE_PRICE_ID': 'price_month', 'STRIPE_PRICE_ID_YEARLY': 'price_year'})
+    os.environ.update({'STRIPE_SECRET_KEY': 'sk_test_x', 'STRIPE_PRICE_ID': 'price_month', 'STRIPE_PRICE_ID_YEARLY': 'price_year',
+                       'STRIPE_PRICE_ID_WEEKLY': 'price_week', 'STRIPE_PRICE_ID_QUARTERLY': 'price_quarter'})
     calls = []
     def fake_post(path, fields=None, method='POST'):
         calls.append((path, fields, method))
@@ -114,19 +115,29 @@ with TemporaryDirectory() as td2:
         return {'url': 'https://checkout.stripe.com/x'}
     billing._post = fake_post
     uid = accounts.user_id_for('sub-c'); accounts.save_account(uid, {'email': 'c@example.com', 'plan': 'free'})
-    billing.checkout_url(uid); billing.checkout_url(uid, 'year')
+    billing.checkout_url(uid); billing.checkout_url(uid, 'year'); billing.checkout_url(uid, 'week'); billing.checkout_url(uid, 'quarter')
     sessions = [f for p, f, _ in calls if p == '/checkout/sessions']
-    assert [f['line_items[0][price]'] for f in sessions] == ['price_month', 'price_year']
+    assert [f['line_items[0][price]'] for f in sessions] == ['price_month', 'price_year', 'price_week', 'price_quarter']
+    try:
+        billing.checkout_url(uid, 'fortnight'); raise AssertionError('unknown plan accepted')
+    except billing.BillingError:
+        pass
+    # Plans on sale with their price per day; the launch price only shows while the offer is on.
+    plans = {p['interval']: p for p in billing.plans()}
+    assert list(plans) == ['week', 'month', 'quarter'] and plans['quarter']['popular'] is True
+    assert (plans['week']['per_day'], plans['month']['per_day'], plans['quarter']['per_day']) == (0.57, 0.33, 0.27)
+    assert 'launch_price' not in plans['month'] and 'env' not in plans['week']
     assert sessions[0]['client_reference_id'] == uid and sessions[0]['customer_email'] == 'c@example.com'
     assert 'discounts[0][coupon]' not in sessions[0] and sessions[0]['allow_promotion_codes'] == 'true'
-    # Launch offer: monthly first subscription gets the coupon (created once); yearly does not.
+    # Launch offer: the first month of a first monthly subscription only (coupon created once).
     os.environ['SNAPPLY_LAUNCH_OFFER'] = 'on'; calls.clear()
-    billing.checkout_url(uid); billing.checkout_url(uid); billing.checkout_url(uid, 'year')
+    billing.checkout_url(uid); billing.checkout_url(uid); billing.checkout_url(uid, 'week'); billing.checkout_url(uid, 'quarter')
     sessions = [f for p, f, _ in calls if p == '/checkout/sessions']
     assert sessions[0]['discounts[0][coupon]'] == billing.LAUNCH_COUPON and 'allow_promotion_codes' not in sessions[0]
-    assert 'discounts[0][coupon]' not in sessions[2]
+    assert 'discounts[0][coupon]' not in sessions[2] and 'discounts[0][coupon]' not in sessions[3]
     created = [f for p, f, m in calls if p == '/coupons']
-    assert len(created) == 1 and created[0]['percent_off'] == '50' and created[0]['duration_in_months'] == '2'
+    assert len(created) == 1 and created[0]['percent_off'] == '50' and created[0]['duration'] == 'once'
+    assert {p['interval']: p for p in billing.plans()}['month']['launch_price'] == 4.99
     # A returning customer (already has a Stripe customer) pays full price.
     accounts.set_plan(uid, 'free', customer='cus_old'); calls.clear(); billing.checkout_url(uid)
     assert 'discounts[0][coupon]' not in [f for p, f, _ in calls if p == '/checkout/sessions'][0]

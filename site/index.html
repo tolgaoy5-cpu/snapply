@@ -108,10 +108,6 @@
   <div class="wrap center">
     <div class="eyebrow">Pricing</div>
     <h2 class="h2">Start free. <em>Go Pro</em> when you're applying in earnest.</h2>
-    <div class="toggle" role="tablist" aria-label="Billing period">
-      <button class="on" data-interval="month" role="tab" aria-selected="true">Monthly</button>
-      <button data-interval="year" role="tab" aria-selected="false">Yearly<small>save 34%</small></button>
-    </div>
     <div class="plans">
       <div class="plan">
         <h3>Free</h3>
@@ -128,11 +124,15 @@
         <a class="btn btn-ghost" data-store href="#pricing">Add to Chrome</a>
       </div>
       <div class="plan pro">
-        <span class="tag">Launch offer</span>
+        <span class="tag">Launch offer: first month £4.99</span>
         <h3>Pro</h3>
-        <div class="desc">For active job seekers.</div>
-        <div class="price" id="proPrice">£4.99<small> / month</small></div>
-        <div class="price-note" id="proNote">for your first 2 months, then £9.99/month. Cancel any time.</div>
+        <div class="desc">For active job seekers. Choose how long you need it.</div>
+        <div class="durations" role="radiogroup" aria-label="Plan length">
+          <label><input type="radio" name="interval" value="week"><span class="d-name">1 week</span><span class="d-price">£3.99</span><span class="d-day">£0.57/day</span></label>
+          <label><input type="radio" name="interval" value="month"><span class="d-name">1 month</span><span class="d-price"><s>£9.99</s> £4.99</span><span class="d-day">first month, then £9.99</span></label>
+          <label class="pop"><input type="radio" name="interval" value="quarter" checked><span class="d-name">3 months <b>Most popular</b></span><span class="d-price">£24.99</span><span class="d-day">£0.27/day · save 17%</span></label>
+        </div>
+        <div class="price-note" id="proNote">£24.99 every 3 months. Cancel any time.</div>
         <ul>
           <li>Unlimited applications</li>
           <li>Remembered answers on every site</li>
@@ -144,7 +144,7 @@
         <div class="status" id="buyStatus" role="status" aria-live="polite"></div>
       </div>
     </div>
-    <p class="fine" style="margin-top:22px">Prices include any applicable VAT. Subscriptions renew automatically until cancelled. <a href="terms.html">Terms</a></p>
+    <p class="fine" style="margin-top:22px">Prices include any applicable VAT. Plans renew at the same length and price until cancelled; per-day prices are the plan price divided by its days. <a href="terms.html">Terms</a></p>
   </div>
 </section>
 
@@ -159,6 +159,7 @@
       <details><summary>Do I buy Pro here or in the extension?</summary><p>Either. Press “Get Pro” above and sign in with the same Google account you use in the extension — your plan appears there straight away.</p></details>
       <details><summary>Does it work on a tablet or phone?</summary><p>Not yet — Snapply runs in Chrome on a computer. An iPad version is planned.</p></details>
       <details><summary>How do I cancel?</summary><p>From the Snapply panel (Manage subscription) or by signing in here. Pro stays active until the end of the period you paid for.</p></details>
+      <details><summary>Which Pro plan should I choose?</summary><p>All plans include the same features. A week suits one or two urgent applications; three months costs less per day if you are applying steadily. Each plan renews at the same length until you cancel.</p></details>
     </div>
   </div>
 </section>

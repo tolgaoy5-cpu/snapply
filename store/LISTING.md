@@ -47,7 +47,7 @@ PRIVATE BY DESIGN
 
 PLANS
 Free: 5 applications a month, remembered answers, 3 AI drafts a month.
-Pro: unlimited applications, 300 AI drafts a month and cover letters for every application — £9.99/month (launch offer: £4.99 for the first 2 months) or £79/year.
+Pro: unlimited applications, 300 AI drafts a month and cover letters for every application — £3.99 a week, £9.99 a month (launch offer: first month £4.99) or £24.99 for 3 months.
 
 A page didn't fill properly? One click in the panel tells us, so we can fix it.
 

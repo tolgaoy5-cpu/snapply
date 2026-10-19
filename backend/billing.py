@@ -1,8 +1,10 @@
 """Stripe subscriptions for the hosted mode, using Stripe's REST API directly (no SDK).
 
-Configuration (environment): STRIPE_SECRET_KEY, STRIPE_PRICE_ID (monthly, £9.99),
-STRIPE_PRICE_ID_YEARLY (£79), STRIPE_WEBHOOK_SECRET, SNAPPLY_LAUNCH_OFFER=on (50% off the first two
-monthly payments; the coupon is created in Stripe on first use),
+Configuration (environment): STRIPE_SECRET_KEY, STRIPE_PRICE_ID_WEEKLY (£3.99/week),
+STRIPE_PRICE_ID (monthly, £9.99), STRIPE_PRICE_ID_QUARTERLY (£24.99 every 3 months),
+STRIPE_PRICE_ID_YEARLY (legacy, only for extensions that still offer it), STRIPE_WEBHOOK_SECRET,
+SNAPPLY_LAUNCH_OFFER=on (first month of the monthly plan at £4.99; the coupon is created in Stripe
+on first use),
 SNAPPLY_PUBLIC_URL (where Checkout returns to). Test-mode keys (sk_test_...) work unchanged.
 """
 from __future__ import annotations
@@ -47,8 +49,15 @@ def _post(path: str, fields: dict[str, str] | None = None, method: str = "POST")
         raise BillingError(message or f"Stripe error {e.code}") from None
 
 
-LAUNCH_COUPON = "snapply-launch-50-2m"
-LAUNCH_OFFER = {"percent_off": 50, "months": 2, "label": "Launch offer: 50% off your first 2 months"}
+LAUNCH_COUPON = "snapply-launch-50-1st"
+LAUNCH_OFFER = {"percent_off": 50, "months": 1, "label": "Launch offer: your first month for £4.99"}
+# Shown by the site and the extension; the amounts must match the Stripe prices.
+PLANS = [
+    {"interval": "week", "label": "1 week", "price": 3.99, "days": 7, "env": "STRIPE_PRICE_ID_WEEKLY"},
+    {"interval": "month", "label": "1 month", "price": 9.99, "days": 30, "env": "STRIPE_PRICE_ID", "launch_price": 4.99},
+    {"interval": "quarter", "label": "3 months", "price": 24.99, "days": 91, "env": "STRIPE_PRICE_ID_QUARTERLY", "popular": True},
+]
+LEGACY = {"year": "STRIPE_PRICE_ID_YEARLY"}
 _coupon_ready = False
 
 
@@ -65,8 +74,7 @@ def _ensure_launch_coupon() -> str:
         except BillingError:
             try:
                 _post("/coupons", {"id": LAUNCH_COUPON, "name": "Launch offer",
-                                   "percent_off": str(LAUNCH_OFFER["percent_off"]), "duration": "repeating",
-                                   "duration_in_months": str(LAUNCH_OFFER["months"])})
+                                   "percent_off": str(LAUNCH_OFFER["percent_off"]), "duration": "once"})
             except BillingError as e:
                 if "already exists" not in str(e):
                     raise
@@ -78,13 +86,27 @@ def _return_url() -> str:
     return os.environ.get("SNAPPLY_PUBLIC_URL", "https://snapply.co.uk").rstrip("/")
 
 
+def plans() -> list[dict[str, Any]]:
+    """The plans on sale (configured in Stripe), with their price per day."""
+    offer = launch_offer_on()
+    out = []
+    for p in PLANS:
+        if not os.environ.get(p["env"]):
+            continue
+        plan = {k: v for k, v in p.items() if k not in ("env", "launch_price")}
+        plan["per_day"] = round(p["price"] / p["days"], 2)
+        if offer and p.get("launch_price"):
+            plan["launch_price"] = p["launch_price"]
+        out.append(plan)
+    return out
+
+
 def price_for(interval: str) -> str:
-    if interval == "year":
-        price = os.environ.get("STRIPE_PRICE_ID_YEARLY", "")
-        if not price:
-            raise BillingError("Yearly plan is not available yet")
-        return price
-    return os.environ.get("STRIPE_PRICE_ID", "")
+    env = next((p["env"] for p in PLANS if p["interval"] == interval), None) or LEGACY.get(interval)
+    price = os.environ.get(env, "") if env else ""
+    if not price:
+        raise BillingError("This plan is not available yet")
+    return price
 
 
 def checkout_url(uid: str, interval: str = "month") -> str:
@@ -98,9 +120,9 @@ def checkout_url(uid: str, interval: str = "month") -> str:
         "success_url": _return_url() + "/thanks",
         "cancel_url": _return_url() + "/#pricing",
     }
-    # The launch discount applies to the monthly plan only, and only to a first subscription
-    # (Stripe does not allow a fixed discount and customer-entered promotion codes together).
-    if interval != "year" and launch_offer_on() and not account.get("stripe_customer"):
+    # The launch discount applies to the first month of the monthly plan only, and only to a first
+    # subscription (Stripe does not allow a fixed discount and customer-entered promotion codes together).
+    if interval == "month" and launch_offer_on() and not account.get("stripe_customer"):
         fields["discounts[0][coupon]"] = _ensure_launch_coupon()
     else:
         fields["allow_promotion_codes"] = "true"

@@ -1,4 +1,4 @@
-"""Referrals give both people a month of Pro on the invited person's first application (once);
+"""Referrals give both people 15 days of Pro on the invited person's first application (once);
 the referrer's rewards are capped; funnel counters hold counts only."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -19,6 +19,9 @@ with TemporaryDirectory() as td:
     A.record_application(bob, 'https://jobs.lever.co/acme/1/apply')
     assert A.plan_of(A.load_account(bob)) == 'pro' and A.plan_of(A.load_account(alice)) == 'pro'
     until = A.load_account(alice)['pro_until']
+    from datetime import datetime, timezone
+    days = (datetime.fromisoformat(until) - datetime.now(timezone.utc)).total_seconds() / 86400
+    assert 14.9 < days <= 15, days  # 15 days each, not a month
     A.record_application(bob, 'https://jobs.lever.co/acme/2/apply')     # only the first application counts
     assert A.load_account(alice)['pro_until'] == until and A.load_account(alice)['referral_rewards'] == 1
     # Existing accounts and self-referral are not linked; unknown codes are ignored.

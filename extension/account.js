@@ -25,17 +25,23 @@
     }
     let a;try{a=await API().account()}catch(e){b.append(line(e.message));return}
     const pro=a.plan==='pro';
-    const invite=`https://snapply.co.uk/?ref=${a.referral_code}`;
-    const copy=button('Copy invite link',async e=>{try{await navigator.clipboard.writeText(invite);e.target.textContent='Copied ✓'}catch(_){e.target.textContent=invite}});
+    const inviteUrl=`https://snapply.co.uk/?ref=${a.referral_code}`;
+    const copy=button('🎁 Copy invite link',async e=>{try{await navigator.clipboard.writeText(inviteUrl);e.target.textContent='Copied ✓ Send it to a friend'}catch(_){e.target.textContent=inviteUrl}},'primary-small');
+    const invite=document.createElement('div');invite.className='acct-invite-card';
+    invite.append(line('Invite a friend, get 15 days of Pro','acct-invite-title'),
+      line(`They get 15 days of Pro too, after their first application.${a.referral_rewards?` You've earned ${a.referral_rewards*15} days so far.`:''}`,'acct-invite'),copy);
     const offer=!pro&&m.launch_offer;
+    // Plans come from the server so prices can change without an extension update.
+    const plans=(m.plans&&m.plans.length)?m.plans:[{interval:'week',label:'1 week',price:3.99,per_day:0.57},{interval:'month',label:'1 month',price:9.99,per_day:0.33},{interval:'quarter',label:'3 months',price:24.99,per_day:0.27,popular:true}];
+    const gbp=n=>'£'+Number(n).toFixed(2);
+    const planLabel=p=>`${p.label} · ${offer&&p.launch_price?`${gbp(p.launch_price)} first month`:gbp(p.price)} · ${gbp(p.per_day)}/day${p.popular?' · Most popular':''}`;
     b.append(line(`${a.email} · ${pro?'Pro':'Free'} plan`,'acct-title'),
       line(a.applications_limit==null?`Applications this month: ${a.applications_used||0} (unlimited)`:`Applications this month: ${a.applications_used||0} of ${a.applications_limit}`),
       line(`AI drafts this month: ${a.ai_used} of ${a.ai_limit}`),
-      ...(offer?[line('Pro: unlimited applications, 300 AI drafts and cover letters. Launch offer: £4.99/month for your first 2 months, then £9.99/month.','acct-offer')]:[]),
-      ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:[button(offer?'Pro · £4.99/month':'Pro · £9.99/month',()=>openTab('/v1/billing/checkout',{interval:'month'}),'primary-small'),button('Pro · £79/year',()=>openTab('/v1/billing/checkout',{interval:'year'}))]),
+      ...(pro?[]:[line(`Pro: unlimited applications, 300 AI drafts and cover letters.${offer?' Launch offer: your first month for £4.99, then £9.99/month.':''}`,'acct-offer')]),
+      ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:plans.map(p=>button(planLabel(p),()=>openTab('/v1/billing/checkout',{interval:p.interval}),p.popular?'primary-small':''))),
       ...(a.pro_until?[line(`Free Pro until ${new Date(a.pro_until).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`)]:[]),
-      line(`Invite friends: you both get a month of Pro after their first application.${a.referral_rewards?` You've earned ${a.referral_rewards} month${a.referral_rewards>1?'s':''}.`:''}`,'acct-invite'),
-      copy,
+      invite,
       button('Sign out',async()=>{await API().signOut();render()}),
       button('Delete account',async e=>{
         // Two-step confirmation inside the panel (no browser dialogs): first click arms, second deletes.

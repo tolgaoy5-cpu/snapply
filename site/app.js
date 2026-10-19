@@ -5,7 +5,7 @@
   const STORE_URL='https://chromewebstore.google.com/detail/snapply/pbciplmicohoeflmnjapakibfgbmjcmb';
   const STORE_LIVE=true; // Chrome Web Store listing approved 2026-10-19
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-  let interval='month', intent='buy', clientId='';
+  let interval='quarter', intent='buy', clientId='';
 
   // Referral and source tracking: ?ref=CODE is kept for 30 days so the extension (or the sign-in
   // below) can claim it; counts are anonymous (no cookies, no identifiers).
@@ -20,7 +20,7 @@
   if(!document.body.dataset.noVisit)event(document.body.dataset.event||'site_visit');
   if(store.get('snapply_ref')){
     const bar=document.createElement('div');bar.className='refbar';
-    bar.textContent='A friend invited you: you both get a month of Snapply Pro free after your first application.';
+    bar.textContent='A friend invited you: you both get 15 days of Snapply Pro free after your first application.';
     document.body.prepend(bar);
   }
 
@@ -42,14 +42,10 @@
     }catch(err){st.textContent=err.message}
   });
 
-  // Monthly / yearly prices.
-  const PRICES={month:['£4.99<small> / month</small>','for your first 2 months, then £9.99/month. Cancel any time.'],
-                year:['£79<small> / year</small>','£6.58 a month, billed yearly. Cancel any time.']};
-  $$('.toggle button').forEach(b=>b.onclick=()=>{
-    interval=b.dataset.interval;
-    $$('.toggle button').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-selected',x===b)});
-    $('#proPrice').innerHTML=PRICES[interval][0];$('#proNote').textContent=PRICES[interval][1];
-  });
+  // Plan length (1 week, 1 month, 3 months).
+  const NOTES={week:'£3.99 every week. Cancel any time.',month:'£4.99 for your first month, then £9.99 every month. Cancel any time.',quarter:'£24.99 every 3 months. Cancel any time.'};
+  const pick=()=>{interval=($('.durations input:checked')||{}).value||'quarter';$('#proNote').textContent=NOTES[interval]};
+  $$('.durations input').forEach(r=>r.onchange=pick);if($('.durations'))pick();
 
   const session=()=>{try{return sessionStorage.getItem('snapplySession')||''}catch(_){return ''}};
   const setSession=t=>{try{sessionStorage.setItem('snapplySession',t)}catch(_){}};
@@ -87,7 +83,7 @@
 
   async function open(kind){
     intent=kind;const dlg=$('#signin');
-    $('#signinTitle').textContent=kind==='buy'?(interval==='year'?'Get Snapply Pro — yearly':'Get Snapply Pro'):'Log in to Snapply';
+    $('#signinTitle').textContent=kind==='buy'?`Get Snapply Pro — ${{week:'1 week',month:'1 month',quarter:'3 months'}[interval]||'Pro'}`:'Log in to Snapply';
     status('');$('#signinIntro').hidden=false;$('#gsi').hidden=false;$('#acct').hidden=true;dlg.showModal();
     try{
       if(session()){try{await proceed();return}catch(_){setSession('')}}

@@ -240,15 +240,15 @@ def plan_of(account: dict[str, Any]) -> str:
     plan = account.get("plan")
     if plan == "pro":
         return "pro"
-    # Free months earned through referrals.
+    # Free Pro days earned through referrals.
     if str(account.get("pro_until") or "") > datetime.now(timezone.utc).isoformat():
         return "pro"
     return "free"
 
 
-# Referrals: "give a month, get a month". Both people get 30 days of Pro once the invited person
+# Referrals: "give 15 days, get 15 days". Both people get 15 days of Pro once the invited person
 # fills their first application (not at sign-up, so throwaway accounts earn nothing).
-REFERRAL_DAYS = 30
+REFERRAL_DAYS = 15
 REFERRAL_MAX_REWARDS = 12
 _CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
