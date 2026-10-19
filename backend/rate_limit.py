@@ -13,6 +13,7 @@ from threading import Lock
 RULES: list[tuple[str, int, int, str]] = [
     ("/v1/auth/google", 20, 3600, "ip"),
     ("/v1/waitlist", 5, 3600, "ip"),
+    ("/v1/events", 120, 3600, "ip"),
     ("/v1/fields/classify", 30, 3600, "user"),
     ("/v1/answers/generate", 10, 60, "user"),
     ("/v1/answers/batch", 3, 60, "user"),

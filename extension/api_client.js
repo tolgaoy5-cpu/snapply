@@ -63,8 +63,9 @@
     const redirect=await chrome.identity.launchWebAuthFlow({url,interactive:true});
     const idToken=new URLSearchParams(new URL(redirect).hash.slice(1)).get('id_token');
     if(!idToken)throw new Error('Google sign-in was cancelled.');
-    const d=await post('/v1/auth/google',{id_token:idToken});
-    await chrome.storage.local.set({snapplySession:d.session});
+    const {snapplyRef}=await chrome.storage.local.get('snapplyRef');
+    const d=await post('/v1/auth/google',{id_token:idToken,ref:snapplyRef||''});
+    await chrome.storage.local.set({snapplySession:d.session});await chrome.storage.local.remove('snapplyRef');
     await ensureScope();
     return d.account;
   }

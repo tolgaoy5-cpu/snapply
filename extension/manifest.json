@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Snapply",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Fills job applications from your CV, remembers your answers and drafts grounded AI answers — you review and submit.",
   "permissions": [
     "activeTab",
@@ -84,5 +84,8 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLmV0pS06cJwoyzgueq3WqKnxirTRQqFMfbm54eZf7+6KgCpGYgA7xxxJzMtwY3B/pLXZxiwyMc4ZkOAfgAOb/goY6EL7GlhD5e9E79wW7J6P8M507nwgxBtYbhacIJSY247iFNP3pJ+pqzQ0a/0RtXaizzi/9PNkTOECdc1ScM179seWCSIH8iR7X+cLl9C5jHQP921kPY9xBmD6PAhW6/4IFNoQ2rQgrcqVxwERn9V8Pi3QYZbwn6qI+0uovyUT3/GMYOsu3+v3bIdKezhvUqSUov4W2i4ytAfiiDJNfeOiCsk6uypdJN6n/k+tGAizzaqLMnpUIgJzPbfFwTFSQIDAQAB"
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLmV0pS06cJwoyzgueq3WqKnxirTRQqFMfbm54eZf7+6KgCpGYgA7xxxJzMtwY3B/pLXZxiwyMc4ZkOAfgAOb/goY6EL7GlhD5e9E79wW7J6P8M507nwgxBtYbhacIJSY247iFNP3pJ+pqzQ0a/0RtXaizzi/9PNkTOECdc1ScM179seWCSIH8iR7X+cLl9C5jHQP921kPY9xBmD6PAhW6/4IFNoQ2rQgrcqVxwERn9V8Pi3QYZbwn6qI+0uovyUT3/GMYOsu3+v3bIdKezhvUqSUov4W2i4ytAfiiDJNfeOiCsk6uypdJN6n/k+tGAizzaqLMnpUIgJzPbfFwTFSQIDAQAB",
+  "background": {
+    "service_worker": "background.js"
+  }
 }

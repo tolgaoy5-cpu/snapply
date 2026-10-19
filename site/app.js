@@ -7,23 +7,40 @@
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
   let interval='month', intent='buy', clientId='';
 
+  // Referral and source tracking: ?ref=CODE is kept for 30 days so the extension (or the sign-in
+  // below) can claim it; counts are anonymous (no cookies, no identifiers).
+  const params=new URLSearchParams(location.search);
+  const store={get:k=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v&&v.exp>Date.now()?v.val:''}catch(_){return ''}},
+               set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify({val:v,exp:Date.now()+30*864e5}))}catch(_){}}};
+  const ref=(params.get('ref')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12);
+  if(ref)store.set('snapply_ref',ref);
+  const source=(params.get('utm_source')||(ref?'referral':'')||(document.referrer?new URL(document.referrer).hostname.replace(/^www\./,''):'')).slice(0,40);
+  if(source)store.set('snapply_source',source);
+  const event=name=>{try{navigator.sendBeacon?navigator.sendBeacon(API+'/v1/events',new Blob([JSON.stringify({name,source:store.get('snapply_source')||source})],{type:'application/json'})):fetch(API+'/v1/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,source}),keepalive:true})}catch(_){}};
+  if(!document.body.dataset.noVisit)event(document.body.dataset.event||'site_visit');
+  if(store.get('snapply_ref')){
+    const bar=document.createElement('div');bar.className='refbar';
+    bar.textContent='A friend invited you: you both get a month of Snapply Pro free after your first application.';
+    document.body.prepend(bar);
+  }
+
   // Sticky nav border once the page scrolls.
   const nav=$('#nav');addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>8),{passive:true});
 
   // "Add to Chrome": the Chrome Web Store once the listing is live; until then, a short
   // "almost here" note that takes an email address to send the install link to.
   $$('[data-store]').forEach(a=>{
-    if(STORE_LIVE){a.href=STORE_URL;a.target='_blank';a.rel='noopener';return}
+    if(STORE_LIVE){a.href=STORE_URL;a.target='_blank';a.rel='noopener';a.addEventListener('click',()=>event('add_to_chrome_click'));return}
     a.onclick=e=>{e.preventDefault();$('#notifyStatus').textContent='';$('#notify').showModal();$('#notifyEmail').focus()};
   });
-  $('#notifyForm').onsubmit=async e=>{
+  $('#notifyForm')&&($('#notifyForm').onsubmit=async e=>{
     e.preventDefault();const st=$('#notifyStatus');st.textContent='Saving…';
     try{
       const r=await fetch(API+'/v1/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('#notifyEmail').value.trim()})});
       if(!r.ok)throw new Error('Please check the email address.');
       st.textContent="Thanks — we'll email you the install link as soon as it's live.";$('#notifyForm').hidden=true;
     }catch(err){st.textContent=err.message}
-  };
+  });
 
   // Monthly / yearly prices.
   const PRICES={month:['£4.99<small> / month</small>','for your first 2 months, then £9.99/month. Cancel any time.'],
@@ -64,7 +81,7 @@
   }
 
   async function onCredential(resp){
-    try{status('Signing in…');const d=await api('/v1/auth/google',{id_token:resp.credential});setSession(d.session);await proceed()}
+    try{status('Signing in…');const d=await api('/v1/auth/google',{id_token:resp.credential,ref:store.get('snapply_ref')});setSession(d.session);await proceed()}
     catch(e){status(e.message)}
   }
 
@@ -81,7 +98,7 @@
     }catch(e){status(e.message)}
   }
 
-  $$('[data-action="buy"]').forEach(b=>b.onclick=()=>open('buy'));
+  $$('[data-action="buy"]').forEach(b=>b.onclick=()=>{event('get_pro_click');open('buy')});
   $$('[data-action="account"]').forEach(b=>b.onclick=e=>{e.preventDefault();open('account')});
   $$('[data-action="close"]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 })();

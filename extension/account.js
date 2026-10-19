@@ -15,19 +15,27 @@
     if(m.auth!=='google'){b.hidden=true;return}
     b.hidden=false;
     if(!await API().session()){
+      const code=document.createElement('input');code.placeholder='Invite code (optional)';code.maxLength=12;code.className='acct-code';
+      const {snapplyRef}=await chrome.storage.local.get('snapplyRef');if(snapplyRef)code.value=snapplyRef;
+      code.onchange=()=>chrome.storage.local.set({snapplyRef:code.value.trim().toUpperCase()});
       b.append(line('Sign in to use Snapply','acct-title'),
         line('Your CV and saved answers are kept in your account. Personal and legal answers and referees stay in this browser only.'),
-        button('Sign in with Google',async e=>{e.target.disabled=true;try{await API().signIn();render();window.dispatchEvent(new Event('snapply-signed-in'))}catch(err){b.append(line(err.message,'acct-status muted'));e.target.disabled=false}},'primary-small'));
+        button('Sign in with Google',async e=>{e.target.disabled=true;try{await API().signIn();render();window.dispatchEvent(new Event('snapply-signed-in'))}catch(err){b.append(line(err.message,'acct-status muted'));e.target.disabled=false}},'primary-small'),code);
       return;
     }
     let a;try{a=await API().account()}catch(e){b.append(line(e.message));return}
     const pro=a.plan==='pro';
+    const invite=`https://snapply.co.uk/?ref=${a.referral_code}`;
+    const copy=button('Copy invite link',async e=>{try{await navigator.clipboard.writeText(invite);e.target.textContent='Copied ✓'}catch(_){e.target.textContent=invite}});
     const offer=!pro&&m.launch_offer;
     b.append(line(`${a.email} · ${pro?'Pro':'Free'} plan`,'acct-title'),
       line(a.applications_limit==null?`Applications this month: ${a.applications_used||0} (unlimited)`:`Applications this month: ${a.applications_used||0} of ${a.applications_limit}`),
       line(`AI drafts this month: ${a.ai_used} of ${a.ai_limit}`),
       ...(offer?[line('Pro: unlimited applications, 300 AI drafts and cover letters. Launch offer: £4.99/month for your first 2 months, then £9.99/month.','acct-offer')]:[]),
       ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:[button(offer?'Pro · £4.99/month':'Pro · £9.99/month',()=>openTab('/v1/billing/checkout',{interval:'month'}),'primary-small'),button('Pro · £79/year',()=>openTab('/v1/billing/checkout',{interval:'year'}))]),
+      ...(a.pro_until?[line(`Free Pro until ${new Date(a.pro_until).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`)]:[]),
+      line(`Invite friends: you both get a month of Pro after their first application.${a.referral_rewards?` You've earned ${a.referral_rewards} month${a.referral_rewards>1?'s':''}.`:''}`,'acct-invite'),
+      copy,
       button('Sign out',async()=>{await API().signOut();render()}),
       button('Delete account',async e=>{
         // Two-step confirmation inside the panel (no browser dialogs): first click arms, second deletes.

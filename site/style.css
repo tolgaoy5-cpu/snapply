@@ -159,3 +159,9 @@ dialog .close{position:absolute;top:14px;right:16px;border:0;background:none;fon
   .nav .actions .btn-ghost{display:none}
   .plan{padding:28px 22px}
 }
+.refbar{background:var(--brand);color:#fff;text-align:center;font-weight:600;font-size:14px;padding:10px 16px}
+.welcome-steps{display:grid;gap:16px;max-width:640px;margin:36px auto 0;text-align:left;counter-reset:w}
+.welcome-steps li{list-style:none;background:var(--tint);border:1px solid var(--soft-line);border-radius:18px;padding:20px 22px 20px 64px;position:relative}
+.welcome-steps li::before{counter-increment:w;content:counter(w);position:absolute;left:20px;top:18px;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-weight:800;display:grid;place-items:center}
+.welcome-steps b{display:block;font-size:17px;margin-bottom:4px}
+.welcome-steps span{color:var(--ink2);font-size:15px}

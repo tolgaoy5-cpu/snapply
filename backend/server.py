@@ -22,6 +22,7 @@ import billing
 import letter_writer
 import field_classifier
 import rate_limit
+import analytics
 import re
 
 app=FastAPI(title='Snapply Core API',version='0.27.0')
@@ -29,7 +30,7 @@ app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_OR
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
 
 # Routes that work without a session in cloud mode.
-PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist'}
+PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist','/v1/events'}
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
@@ -322,13 +323,14 @@ def health():
 
 class GoogleSignIn(BaseModel):
     id_token:str=Field(min_length=20,max_length=8000)
+    ref:str=Field(default='',max_length=20)
 
 @app.post('/v1/auth/google')
 def auth_google(r:GoogleSignIn):
     if not accounts.cloud_mode():
         raise HTTPException(status_code=404,detail='Sign-in is only used by the hosted service')
     try:
-        token,account=accounts.sign_in(accounts.verify_google_id_token(r.id_token))
+        token,account=accounts.sign_in(accounts.verify_google_id_token(r.id_token),ref=r.ref or None)
     except accounts.AuthError as e:
         raise HTTPException(status_code=401,detail=str(e))
     return {'ok':True,'session':token,'account':account}
@@ -370,6 +372,15 @@ async def page_report(request:Request,r:PageReport):
     name=field_classifier.save_report(accounts.current_uid.get(),r.model_dump())
     return {'ok':True,'id':name}
 
+class SiteEvent(BaseModel):
+    name:str=Field(min_length=3,max_length=40)
+    source:str=Field(default='',max_length=60)
+
+@app.post('/v1/events')
+def site_event(r:SiteEvent):
+    # Anonymous funnel counter for the website and welcome page (no cookies, no identifiers).
+    return {'ok':analytics.record(r.name,r.source)}
+
 class WaitlistRequest(BaseModel):
     email:str=Field(min_length=5,max_length=254,pattern=r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
@@ -377,6 +388,7 @@ class WaitlistRequest(BaseModel):
 def waitlist(r:WaitlistRequest):
     # People who want the Chrome Web Store link when it goes live (public, no sign-in).
     accounts.add_to_waitlist(r.email)
+    analytics.record('waitlist_join')
     return {'ok':True}
 
 @app.get('/v1/me')
@@ -403,7 +415,9 @@ def billing_checkout(r:CheckoutRequest=CheckoutRequest()):
     if uid is None:
         raise HTTPException(status_code=404,detail='Local mode has no subscription')
     try:
-        return {'ok':True,'url':billing.checkout_url(uid,r.interval)}
+        url=billing.checkout_url(uid,r.interval)
+        analytics.record('checkout_started',r.interval)
+        return {'ok':True,'url':url}
     except billing.BillingError as e:
         raise HTTPException(status_code=503,detail=str(e))
 
@@ -424,7 +438,10 @@ async def billing_webhook(request:Request):
         event=billing.verify_webhook(body,request.headers.get('stripe-signature',''))
     except billing.BillingError as e:
         raise HTTPException(status_code=400,detail=str(e))
-    return {'ok':True,'result':billing.handle_event(event)}
+    result=billing.handle_event(event)
+    if result=='upgraded':
+        analytics.record('pro_converted')
+    return {'ok':True,'result':result}
 
 @app.post('/v1/job/analyze')
 def job_analyze(p:JobCapture):

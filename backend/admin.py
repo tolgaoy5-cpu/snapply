@@ -4,6 +4,7 @@
     fly ssh console --app snapply-api -C "python admin.py grant-pro someone@gmail.com"
     fly ssh console --app snapply-api -C "python admin.py revoke-pro someone@gmail.com"
     fly ssh console --app snapply-api -C "python admin.py waitlist"
+    fly ssh console --app snapply-api -C "python admin.py stats 30"          (funnel counts by source)
     fly ssh console --app snapply-api -C "python admin.py reports"          (then: report <file name>)
 
 grant-pro gives a complimentary Pro plan (no Stripe subscription). The person must have signed in
@@ -36,6 +37,17 @@ def _find(email: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) >= 2 and argv[1] == "stats":
+        import analytics
+        days = int(argv[2]) if len(argv) > 2 else 30
+        totals = analytics.summary(days)
+        order = ["site_visit", "add_to_chrome_click", "welcome_page", "signup", "get_pro_click", "checkout_started", "pro_converted", "referral_rewarded", "waitlist_join"]
+        print(f"Last {days} days")
+        for name in order + sorted(set(totals) - set(order)):
+            by = totals.get(name, {})
+            detail = ", ".join(f"{k} {v}" for k, v in sorted(by.items(), key=lambda kv: -kv[1])[:6])
+            print(f"{name:22} {sum(by.values()):6}   {detail}")
+        return 0
     if len(argv) >= 2 and argv[1] == "reports":
         folder = accounts.data_root() / "reports"
         files = sorted(folder.glob("*.json")) if folder.exists() else []

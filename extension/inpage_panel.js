@@ -2,6 +2,11 @@
 // right automatically; closing it leaves a logo button on the right edge to reopen it. The panel is popup.html
 // in an iframe, so it is the same UI and code as the toolbar popup. Never submits anything.
 (function(){
+  // On snapply.co.uk, carry an invite code from the website into the extension (claimed at sign-up).
+  if(/(^|\.)snapply\.co\.uk$/.test(location.hostname)){
+    try{const v=JSON.parse(localStorage.getItem('snapply_ref')||'null');if(v&&v.val&&v.exp>Date.now())chrome.storage.local.set({snapplyRef:String(v.val).slice(0,12)})}catch(_){}
+    return;
+  }
   if(window.top!==window||window.__JC_INPAGE_PANEL)return;
   window.__JC_INPAGE_PANEL=true;
   const detectNow=()=>window.JobCopilotAdapterRegistry?.detect?.(document,location)||'GENERIC';

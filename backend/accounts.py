@@ -155,10 +155,20 @@ def save_account(uid: str, account: dict[str, Any]) -> dict[str, Any]:
         return account
 
 
-def sign_in(google: dict[str, str]) -> tuple[str, dict[str, Any]]:
+def sign_in(google: dict[str, str], ref: str | None = None) -> tuple[str, dict[str, Any]]:
     uid = user_id_for(google["sub"])
     with _LOCK:
         account = load_account(uid)
+        is_new = not account
+        if is_new:
+            referrer = uid_for_referral(ref) if ref else None
+            if referrer and referrer != uid and load_account(referrer):
+                account["referred_by"] = referrer
+            try:
+                import analytics
+                analytics.record("signup", "referral" if account.get("referred_by") else "")
+            except Exception:
+                pass
         now = datetime.now(timezone.utc).isoformat()
         account.update({"email": google["email"], "name": google.get("name", ""), "last_sign_in": now})
         account.setdefault("created_at", now)
@@ -221,13 +231,72 @@ def record_application(uid: str | None, url: str) -> dict[str, Any]:
             seen.append(key)
             for old in sorted(usage)[:-3]:
                 usage.pop(old, None)
+            _reward_referral(uid, account)
             save_account(uid, account)
         return {"counted": new, "applications_used": len(seen), "applications_limit": limit}
 
 
 def plan_of(account: dict[str, Any]) -> str:
     plan = account.get("plan")
-    return plan if plan in PLANS else "free"
+    if plan == "pro":
+        return "pro"
+    # Free months earned through referrals.
+    if str(account.get("pro_until") or "") > datetime.now(timezone.utc).isoformat():
+        return "pro"
+    return "free"
+
+
+# Referrals: "give a month, get a month". Both people get 30 days of Pro once the invited person
+# fills their first application (not at sign-up, so throwaway accounts earn nothing).
+REFERRAL_DAYS = 30
+REFERRAL_MAX_REWARDS = 12
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def referral_code(uid: str) -> str:
+    digest = hashlib.sha256(("ref:" + uid).encode()).digest()
+    code = "".join(_CODE_ALPHABET[b % len(_CODE_ALPHABET)] for b in digest[:7])
+    path = data_root() / "referrals" / f"{code}.json"
+    if not path.exists():
+        _write_json(path, {"uid": uid})
+    return code
+
+
+def uid_for_referral(code: str) -> str | None:
+    code = "".join(c for c in str(code or "").upper() if c in _CODE_ALPHABET)[:12]
+    if len(code) != 7:
+        return None
+    try:
+        return json.loads((data_root() / "referrals" / f"{code}.json").read_text()).get("uid")
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _extend_pro(account: dict[str, Any], days: int) -> None:
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    current = str(account.get("pro_until") or "")
+    start = max(now, datetime.fromisoformat(current)) if current else now
+    account["pro_until"] = (start + timedelta(days=days)).isoformat()
+
+
+def _reward_referral(uid: str, account: dict[str, Any]) -> None:
+    """Called (under the lock) the first time a referred user fills an application."""
+    referrer = account.get("referred_by")
+    if not referrer or account.get("referral_rewarded"):
+        return
+    account["referral_rewarded"] = True
+    _extend_pro(account, REFERRAL_DAYS)
+    other = load_account(referrer)
+    if other and int(other.get("referral_rewards", 0)) < REFERRAL_MAX_REWARDS:
+        other["referral_rewards"] = int(other.get("referral_rewards", 0)) + 1
+        _extend_pro(other, REFERRAL_DAYS)
+        save_account(referrer, other)
+    try:
+        import analytics
+        analytics.record("referral_rewarded")
+    except Exception:
+        pass
 
 
 def public_account(uid: str) -> dict[str, Any]:
@@ -237,7 +306,10 @@ def public_account(uid: str) -> dict[str, Any]:
     apps = len((account.get("application_usage") or {}).get(_month(), []))
     return {"email": account.get("email", ""), "name": account.get("name", ""), "plan": plan,
             "ai_used": used, "ai_limit": PLANS[plan], "applications_used": apps,
-            "applications_limit": APPLICATION_LIMITS[plan], "subscription_status": account.get("subscription_status", "")}
+            "applications_limit": APPLICATION_LIMITS[plan], "subscription_status": account.get("subscription_status", ""),
+            "pro_until": account.get("pro_until") if account.get("plan") != "pro" else None,
+            "referral_code": referral_code(uid), "referral_rewards": int(account.get("referral_rewards", 0)),
+            "referred": bool(account.get("referred_by"))}
 
 
 def consume_ai(uid: str | None, units: int = 1) -> None:
