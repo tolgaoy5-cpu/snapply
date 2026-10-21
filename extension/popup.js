@@ -743,12 +743,19 @@ async function allowApplication(){
 
 // Saved CV and the document library go into empty upload areas they clearly match.
 async function attachEverything(){
-  const names=[];
+  const names=[],problems=[];
   try{
     const slots=(await send('DOCUMENT_SLOTS'))?.slots||[];
-    if(slots.includes('cv')){
+    // Any upload area on the page: try the saved CV (the page side picks the CV slot or refuses),
+    // and say why when it could not be attached instead of failing silently.
+    if(slots.length){
       const cv=await window.JobCopilotSavedCV.get().catch(()=>null);
-      if(cv){const payload=await window.JobCopilotSavedCV.getPayload();const d=payload?await send('ATTACH_SAVED_CV',{savedCV:payload}):null;if(d?.ok&&!d.already_uploaded)names.push('CV')}
+      if(cv){
+        const payload=await window.JobCopilotSavedCV.getPayload().catch(()=>null);
+        const d=payload?await send('ATTACH_SAVED_CV',{savedCV:payload}):{ok:false,reason:'Your saved CV could not be loaded.'};
+        if(d?.ok&&!d.already_uploaded)names.push('CV');
+        else if(!d?.ok&&slots.includes('cv'))problems.push(`CV not attached: ${d?.reason||d?.error||'unknown reason'}`);
+      }else if(slots.includes('cv'))problems.push('No saved CV yet: import your CV in My Profile to attach it automatically');
     }
     const docs=await window.SnapplyDocumentLibrary.list();
     if(docs.length&&slots.some(c=>c&&c!=='cv'&&c!=='cover_letter')){
@@ -756,7 +763,7 @@ async function attachEverything(){
       (r?.results||[]).filter(x=>x.ok).forEach(x=>names.push(...x.names));
     }
   }catch(_){/* attaching is a convenience; the fill result still stands */}
-  return {names,note:names.length?` · attached ${names.join(', ')}`:''};
+  return {names,problems,note:(names.length?` · attached ${names.join(', ')}`:'')+(problems.length?` · ${problems.join(' · ')}`:'')};
 }
 async function renderDocuments(){
   const box=byId('docList');if(!box)return;

@@ -505,7 +505,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     // Drag-and-drop upload areas (TalentLink and others) keep a hidden file input whose id names
     // the CV slot ("upload_attached_resume_13") while the visible label just says "upload file".
     const named=[...document.querySelectorAll('input[type="file"]')]
-      .filter(el=>/resume|(^|[^a-z])cv([^a-z]|$)|curriculum/i.test(`${el.id} ${el.name} ${el.className} ${el.parentElement?.innerText||''}`)&&!/cover/i.test(`${el.id} ${el.name}`));
+      .filter(el=>/resume|(^|[^a-z])cv([^a-z]|$)|curriculum/i.test(`${el.id} ${el.name} ${el.className} ${el.parentElement?.innerText||''} ${window.SnapplyDocuments?.slotText?.(el)||''}`)&&!/cover/i.test(`${el.id} ${el.name}`));
     if(named.length===1)return named;
     // A page with a single upload control that asks for a CV ("Upload your CV", "Browse") is the CV slot.
     const files=[...document.querySelectorAll('input[type="file"]')];
@@ -532,6 +532,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     const at=text.indexOf(name);
     return at>=0&&/Successfully Uploaded!/i.test(text.slice(at,at+250));
   }
+  window.snapplyResumeInputs=resumeFileInputs;
   async function attachSavedCV(saved){
     if(!saved?.base64||!saved?.name) return {ok:false,reason:'Saved CV payload is missing.'};
     const inputs=resumeFileInputs();
@@ -684,7 +685,8 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     const lb=String(el.getAttribute('aria-labelledby')||'').split(/\s+/).map(id=>document.getElementById(id)?.innerText||'').join(' ');
     return [el.id,el.name,el.getAttribute('data-ui')||'',String(el.className||''),String(group?.className||''),GENERIC.test(lt)?'':lt,lb,headingFor(el)].join(' ');
   }
-  function categoryOf(el){const t=slotText(el);return (CATEGORIES.find(([,re])=>re.test(t))||[null])[0]}
+  // The CV slot is whatever the CV attach step would use, so the panel and the attach agree.
+  function categoryOf(el){try{if((window.snapplyResumeInputs?.()||[]).includes(el))return 'cv'}catch(_){}const t=slotText(el);return (CATEGORIES.find(([,re])=>re.test(t))||[null])[0]}
   function decode(base64){const raw=atob(String(base64||''));const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);return b}
   function accepts(el,file){
     const accept=String(el.getAttribute('accept')||'').trim();if(!accept)return true;
@@ -719,7 +721,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     }
     return {ok:true,results,slots:slots.map(s=>s.category)};
   }
-  window.SnapplyDocuments={categoryOf,attachDocuments};
+  window.SnapplyDocuments={categoryOf,attachDocuments,slotText};
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='ATTACH_DOCUMENTS'){try{send(attachDocuments(m.documents||[]))}catch(e){send({ok:false,error:e.message})}}
     if(m.type==='DOCUMENT_SLOTS'){const all=[...document.querySelectorAll('input[type="file"]')];
