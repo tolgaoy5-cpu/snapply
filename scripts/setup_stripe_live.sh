@@ -19,12 +19,20 @@ field() { python3 -c "import json,sys; d=json.load(sys.stdin); v=d$1; print(v if
 fail_if_error() { python3 -c "import json,sys; d=json.load(sys.stdin); e=d.get('error'); sys.exit('Stripe error: '+e.get('message','')) if e else print(json.dumps(d))"; }
 
 price_for() { # lookup_key amount interval interval_count product
-  local id; id=$(stripe -G https://api.stripe.com/v1/prices -d "lookup_keys[]=$1" -d active=true | field "['data'][0]['id'] if d.get('data') else None")
-  if [ -z "$id" ]; then
-    id=$(stripe https://api.stripe.com/v1/prices -d "product=$5" -d currency=gbp -d "unit_amount=$2" \
-      -d "recurring[interval]=$3" -d "recurring[interval_count]=$4" -d "lookup_key=$1" -d tax_behavior=inclusive | fail_if_error | field "['id']")
+  # Reuse a price with this lookup key only if it belongs to this product and has the right amount and
+  # interval; otherwise create one and move the lookup key to it (an older copy may sit on another product).
+  local found; found=$(stripe -G https://api.stripe.com/v1/prices -d "lookup_keys[]=$1" -d active=true | python3 -c "
+import json,sys
+d=json.load(sys.stdin).get('data') or []
+p=d[0] if d else None
+ok=p and p.get('product')=='$5' and p.get('unit_amount')==$2 and (p.get('recurring') or {}).get('interval')=='$3' and (p.get('recurring') or {}).get('interval_count')==$4
+print(p['id'] if ok else '')")
+  if [ -z "$found" ]; then
+    found=$(stripe https://api.stripe.com/v1/prices -d "product=$5" -d currency=gbp -d "unit_amount=$2" \
+      -d "recurring[interval]=$3" -d "recurring[interval_count]=$4" -d "lookup_key=$1" -d transfer_lookup_key=true \
+      -d tax_behavior=inclusive | fail_if_error | field "['id']")
   fi
-  echo "$id"
+  echo "$found"
 }
 
 PRODUCT=$(stripe -G https://api.stripe.com/v1/products/search --data-urlencode "query=metadata['snapply']:'pro'" | field "['data'][0]['id'] if d.get('data') else None")
