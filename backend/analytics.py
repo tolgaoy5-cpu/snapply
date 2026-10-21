@@ -10,7 +10,7 @@ from threading import RLock
 from accounts import _write_json, data_root
 
 EVENTS = {"site_visit", "add_to_chrome_click", "get_pro_click", "waitlist_join", "welcome_page",
-          "signup", "checkout_started", "pro_converted", "referral_rewarded"}
+          "signup", "checkout_started", "pro_converted", "referral_rewarded", "guide_visit"}
 _LOCK = RLock()
 
 

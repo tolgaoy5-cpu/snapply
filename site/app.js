@@ -25,7 +25,7 @@
   }
 
   // Sticky nav border once the page scrolls.
-  const nav=$('#nav');addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>8),{passive:true});
+  const nav=$('#nav');if(nav)addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>8),{passive:true});
 
   // "Add to Chrome": the Chrome Web Store once the listing is live; until then, a short
   // "almost here" note that takes an email address to send the install link to.

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://snapply.co.uk/sitemap.xml
