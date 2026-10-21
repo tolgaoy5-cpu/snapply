@@ -10,8 +10,8 @@ new Function(fs.readFileSync(path.join(__dirname,'../extension/memory.js'),'utf8
 const API=window.JobCopilotAPI,M=window.JobCopilotMemory;
 const tok=uid=>Buffer.from(JSON.stringify({uid,exp:9e9})).toString('base64url')+'.sig';
 (async()=>{
-  // Local mode cached someone's profile.
-  await API.ensureScope();
+  // Local mode (chosen in Advanced) cached someone's profile.
+  await API.setBase(API.LOCAL);
   Object.assign(store,{masterProfile:{full_name:'Local Person'},answerQueueV012:{items:[1]},savedCV:{name:'cv.pdf'}});
   // Switch to the cloud: caches go.
   await API.setBase(API.CLOUD);

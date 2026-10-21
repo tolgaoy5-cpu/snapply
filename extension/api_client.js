@@ -3,7 +3,7 @@
 (function(){
   const LOCAL='http://127.0.0.1:8787';
   const CLOUD='https://snapply-api.fly.dev';
-  async function base(){const x=await chrome.storage.local.get('apiBase');return x.apiBase||LOCAL}
+  async function base(){const x=await chrome.storage.local.get('apiBase');return x.apiBase||CLOUD}
   async function setBase(url){await chrome.storage.local.set({apiBase:url});healthCache=null;await ensureScope()}
   let healthCache=null;
   // Server mode: {auth:'none'} locally, {auth:'google', google_client_id} on the hosted service.

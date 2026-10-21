@@ -30,7 +30,7 @@ def build() -> Path:
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
 
     api = (out / "api_client.js").read_text()
-    api, n = re.subn(r"return x\.apiBase\|\|LOCAL\}", "return x.apiBase&&x.apiBase!==LOCAL?x.apiBase:CLOUD}", api)
+    api, n = re.subn(r"return x\.apiBase\|\|(?:LOCAL|CLOUD)\}", "return x.apiBase&&x.apiBase!==LOCAL?x.apiBase:CLOUD}", api)
     assert n == 1, "api_client.js default server not found"
     (out / "api_client.js").write_text(api)
 
