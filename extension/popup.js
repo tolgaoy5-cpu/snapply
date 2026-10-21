@@ -636,11 +636,19 @@ async function renderCoverLetterAsk(){
     try{
       const {capture,job}=await resolveCurrentJob();
       if(!job.requirement_count)throw new Error('Could not find the job description. Open the job advert once, then press Fill this page again.');
-      const draft=await window.JobCopilotAPI.post('/v1/cover-letter/generate',{job,transferable:false,length:'standard'});
+      let draft=await window.JobCopilotAPI.post('/v1/cover-letter/generate',{job,transferable:false,length:'standard'});
+      // A job outside the CV's field: write honestly from transferable experience instead of failing.
+      if(draft.status!=='REVIEW'&&draft.can_draft_transferable){
+        st.textContent='This job is outside your CV\'s field, so Snapply is writing from your transferable experience…';
+        draft=await window.JobCopilotAPI.post('/v1/cover-letter/generate',{job,transferable:true,length:'standard'});
+      }
       if(draft.status!=='REVIEW')throw new Error(draft.reason||'Could not write a letter for this job.');
       await chrome.storage.local.set({coverLetterDraft:{job:draft.job,body:draft.body,own:draft.mode==='transferable'},...(capture.error?{}:{currentJob:job})});
       body.value=draft.body;body.hidden=false;attach.hidden=false;write.textContent='Write again';
-      st.textContent='Written only from your CV. Read it, change anything you like, then attach it.';
+      st.className='muted';
+      st.textContent=draft.mode==='transferable'
+        ?'This job is outside your CV\'s field, so the letter talks about transferable strengths only — nothing your CV does not show. Read it, change anything you like, then attach it.'
+        :'Written only from your CV. Read it, change anything you like, then attach it.';
     }catch(e){
       st.className='block';st.textContent=e.message;
       if(/\bPro\b/.test(e.message)&&!card.querySelector('a'))card.append(el('a',{href:'https://snapply.co.uk/#pricing',target:'_blank',textContent:'See Pro plans'}));
