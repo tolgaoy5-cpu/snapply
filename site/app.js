@@ -16,7 +16,10 @@
   if(ref)store.set('snapply_ref',ref);
   const source=(params.get('utm_source')||(ref?'referral':'')||(document.referrer?new URL(document.referrer).hostname.replace(/^www\./,''):'')).slice(0,40);
   if(source)store.set('snapply_source',source);
-  const event=name=>{try{navigator.sendBeacon?navigator.sendBeacon(API+'/v1/events',new Blob([JSON.stringify({name,source:store.get('snapply_source')||source})],{type:'application/json'})):fetch(API+'/v1/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,source}),keepalive:true})}catch(_){}};
+  // text/plain: sendBeacon refuses JSON content types, and plain text needs no CORS preflight.
+  const event=name=>{const body=JSON.stringify({name,source:store.get('snapply_source')||source});
+    try{if(navigator.sendBeacon&&navigator.sendBeacon(API+'/v1/events',new Blob([body],{type:'text/plain'})))return}catch(_){}
+    try{fetch(API+'/v1/events',{method:'POST',headers:{'Content-Type':'text/plain'},body,keepalive:true}).catch(()=>{})}catch(_){}};
   if(!document.body.dataset.noVisit)event(document.body.dataset.event||'site_visit');
   if(store.get('snapply_ref')){
     const bar=document.createElement('div');bar.className='refbar';

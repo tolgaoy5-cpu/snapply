@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -382,8 +383,14 @@ class SiteEvent(BaseModel):
     source:str=Field(default='',max_length=60)
 
 @app.post('/v1/events')
-def site_event(r:SiteEvent):
+async def site_event(request:Request):
     # Anonymous funnel counter for the website and welcome page (no cookies, no identifiers).
+    # Browsers send it with navigator.sendBeacon as text/plain (a JSON content type is refused there),
+    # so the body is read as JSON whatever its declared type.
+    try:
+        r=SiteEvent(**json.loads((await request.body()).decode('utf-8')[:2000]))
+    except Exception:
+        raise HTTPException(status_code=422,detail='Invalid event')
     return {'ok':analytics.record(r.name,r.source)}
 
 class WaitlistRequest(BaseModel):

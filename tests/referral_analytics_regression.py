@@ -40,4 +40,15 @@ with TemporaryDirectory() as td:
     assert s['site_visit'] == {'reddit': 1} and s['signup']['referral'] >= 2 and s['referral_rewarded']['direct'] == 2
     raw = json.dumps(s)
     assert '@' not in raw
+    # The website sends events with navigator.sendBeacon as text/plain (JSON types are refused there).
+    os.environ['SNAPPLY_MODE'] = 'cloud'
+    from fastapi.testclient import TestClient
+    import server
+    c = TestClient(server.app)
+    body = json.dumps({'name': 'guide_visit', 'source': 'google'})
+    for ctype in ('text/plain;charset=UTF-8', 'application/json'):
+        r = c.post('/v1/events', content=body, headers={'Content-Type': ctype, 'Origin': 'https://snapply.co.uk'})
+        assert r.status_code == 200 and r.json()['ok'], (ctype, r.status_code, r.text)
+    assert c.post('/v1/events', content='not json', headers={'Content-Type': 'text/plain'}).status_code == 422
+    assert analytics.summary(1)['guide_visit'] == {'google': 2}
 print('referrals and analytics ok')
