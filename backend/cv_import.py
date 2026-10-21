@@ -186,6 +186,10 @@ def parse_cv_text(text:str)->dict:
     email=(EMAIL.search(flat).group(0) if EMAIL.search(flat) else None)
     pm=PHONE.search('\n'.join(lines[:15])) or PHONE.search(flat)
     phone=re.sub(r'\s+',' ',pm.group(0)).strip() if pm else None
+    if not phone:
+        # A UK mobile written without its leading 0 ("7700900123") on a contact line near the top.
+        mm=re.search(r'(?<![\d+])7\d{3}[\s-]?\d{3}[\s-]?\d{3}(?!\d)','\n'.join(lines[:15]))
+        if mm:phone='0'+re.sub(r'[\s-]','',mm.group(0))
     head='\n'.join(lines[:15])
     pc=POSTCODE.search(head)
     postcode=f'{pc.group(1)} {pc.group(2)}' if pc else None

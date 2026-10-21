@@ -47,13 +47,22 @@ function profileAskCard(x){
   return el('div',{className:'ask-card'},[el('b',{textContent:PROFILE_ASK[x.canonical]}),el('div',{className:'muted',textContent:String(x.label||'').replace(/\s+/g,' ').trim()}),input,el('div',{className:'row'},[go]),status]);
 }
 function cards(items){const root=byId('cards');root.replaceChildren();(items||[]).slice(0,20).forEach(x=>{if(PROFILE_ASK[x.canonical]&&x.status!=='COMPLETE'){root.appendChild(profileAskCard(x));return}const [title,hint]=CARD_TEXT[x.status]||CARD_TEXT[x.decision]||['Please check',x.reason||''];const d=document.createElement('div');d.className='card';const t=document.createElement('b');t.textContent=title;const l=document.createElement('div');l.textContent=String(x.label||x.question||'').replace(/\s+/g,' ').trim();const h=document.createElement('div');h.className='muted';h.textContent=hint;d.append(t,l,h);root.appendChild(d)})}
+// One "Fill this page" reads the profile many times; ask the server once every few seconds at most.
+let stateCache=null;
+function serverState(){
+  if(!stateCache||Date.now()-stateCache.t>8000)stateCache={t:Date.now(),p:window.JobCopilotAPI.get('/v1/state')};
+  stateCache.p.catch(()=>{stateCache=null});
+  return stateCache.p;
+}
+function forgetServerState(){stateCache=null}
+['snapply-signed-in','snapply-signed-out'].forEach(e=>window.addEventListener(e,forgetServerState));
 async function profile(){
   await window.JobCopilotAPI.ensureScope();
   let {masterProfile}=await chrome.storage.local.get('masterProfile');
   // The local backend owns the current CV/profile across extension versions.
   // A cached Chrome profile may be stale after a previous tab or version edits it.
   try{
-    const state=await window.JobCopilotAPI.get('/v1/state');
+    const state=await serverState();
     if(state.master_profile&&Object.keys(state.master_profile).length){
       masterProfile=state.master_profile;
       await chrome.storage.local.set({masterProfile});
@@ -83,10 +92,10 @@ async function refreshSavedCVState(){
     const cv=await window.JobCopilotSavedCV.get();
     if(!cv){el.textContent='No reusable CV saved yet.';return}
     el.textContent=`Saved CV: ${cv.name} · ${(cv.size/1024/1024).toFixed(2)} MB · ${cv.storage==='backend'?'persistent backend':'local cache'}`;
-  }catch(_){el.textContent='Saved CV status unavailable. Start the local backend and reopen this panel; do not re-import the CV.';}
+  }catch(e){el.textContent=/sign in|connection/i.test(e?.message||'')?e.message:'Saved CV status unavailable. Reopen this panel; do not re-import the CV.';}
 }
 
-byId('importCV').onclick=async()=>{try{const f=byId('cvFile').files?.[0];if(!f)throw new Error('Choose a CV file first.');byId('summary').textContent='Importing and saving CV…';const d=await window.JobCopilotAPI.uploadCV(f);await chrome.storage.local.set({masterProfile:d.profile});const saved=await window.JobCopilotSavedCV.saveLocal(f);await refreshProfileState();byId('summary').textContent=(d.review_required?'CV imported · review unresolved items':'CV imported successfully')+` · saved ${saved.name}`;show({...d,saved_cv:{name:saved.name,size:saved.size,type:saved.type}})}catch(e){show({error:e.message})}};
+byId('importCV').onclick=async()=>{forgetServerState();try{const f=byId('cvFile').files?.[0];if(!f)throw new Error('Choose a CV file first.');byId('summary').textContent='Importing and saving CV…';const d=await window.JobCopilotAPI.uploadCV(f);await chrome.storage.local.set({masterProfile:d.profile});const saved=await window.JobCopilotSavedCV.saveLocal(f);await refreshProfileState();byId('summary').textContent=(d.review_required?'CV imported · review unresolved items':'CV imported successfully')+` · saved ${saved.name}`;show({...d,saved_cv:{name:saved.name,size:saved.size,type:saved.type}})}catch(e){show({error:e.message})}};
 
 byId('attachSavedCV').onclick=async()=>{try{
   const cv=await window.JobCopilotSavedCV.getPayload();
@@ -513,7 +522,7 @@ async function renderUnresolved(){
   byId('unresolvedReason').textContent=x.reason||'Requires confirmation.';byId('unresolvedValue').value=x.source_value||'';byId('unresolvedEditor').style.display='block';
 }
 byId('nextUnresolved').onclick=async()=>{const p=await profile();if((p.unresolved||[]).length){unresolvedCursor=(unresolvedCursor+1)%(p.unresolved.length);await renderUnresolved()}};
-byId('resolveUnresolved').onclick=async()=>{try{const x=await chrome.storage.local.get('masterProfile');const p=x.masterProfile||{};const items=p.unresolved||[];if(!items.length)throw new Error('No unresolved item.');const item=items[Math.min(unresolvedCursor,items.length-1)];const value=byId('unresolvedValue').value.trim();if(!value)throw new Error('Enter a confirmed value.');const r=await window.JobCopilotAPI.post('/v1/profile/resolve',{profile:p,unresolved_id:item.id||`unresolved-${unresolvedCursor}`,value});await chrome.storage.local.set({masterProfile:r.profile});unresolvedCursor=0;await refreshProfileState();show({resolved:true,field:item.field,remaining:r.unresolved.length})}catch(e){show({error:e.message})}};
+byId('resolveUnresolved').onclick=async()=>{forgetServerState();try{const x=await chrome.storage.local.get('masterProfile');const p=x.masterProfile||{};const items=p.unresolved||[];if(!items.length)throw new Error('No unresolved item.');const item=items[Math.min(unresolvedCursor,items.length-1)];const value=byId('unresolvedValue').value.trim();if(!value)throw new Error('Enter a confirmed value.');const r=await window.JobCopilotAPI.post('/v1/profile/resolve',{profile:p,unresolved_id:item.id||`unresolved-${unresolvedCursor}`,value});await chrome.storage.local.set({masterProfile:r.profile});unresolvedCursor=0;await refreshProfileState();show({resolved:true,field:item.field,remaining:r.unresolved.length})}catch(e){show({error:e.message})}};
 
 
 async function refreshMemoryStatus(){

@@ -57,6 +57,7 @@ assert p['full_name'] == 'Priya Shah', p['full_name']
 for written in ['07700 900123', '07700-900-123', '+44 (0)20 7946 0000', '020 7946 0000', '07700900123']:
     assert parse_cv_text(f'Sam Lee\n{written}\nsam@example.com\n')['phone'] == written, written
 
+assert parse_cv_text('Sam Lee\nsam@example.com\n7700900123\nLondon, UK\n')['phone'] == '07700900123'
 assert to_month_year('March 2021') == '03/2021' and to_month_year('3/2021') == '03/2021' and to_month_year('Current') == 'Present'
 
 # 4. AI reading: invented values are dropped; values copied from the CV are kept.

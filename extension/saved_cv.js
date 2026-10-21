@@ -34,7 +34,7 @@
     try{const meta=await backendMeta(); if(meta) return {...meta,storage:'backend'}}catch(e){backendError=e}
     const cached=await local();
     if(cached)return cached;
-    if(backendError)throw new Error('Saved CV status could not be checked. Start the local backend and retry; do not re-import the CV.');
+    if(backendError)throw new Error(backendError.status===401?'Sign in with Google (top of this panel) to use your saved CV.':'Saved CV status could not be checked. Check your connection and reopen the panel; do not re-import the CV.');
     return null;
   }
   async function getPayload(){
@@ -42,7 +42,7 @@
     try{const fromBackend=await fetchBackendPayload(); if(fromBackend) return fromBackend}
     catch(e){backendError=e}
     const cached=await local();if(cached)return cached;
-    if(backendError)throw new Error('Local backend is unavailable or the saved CV could not be fetched. Start the backend and retry; do not re-import the CV.');
+    if(backendError)throw new Error(backendError.status===401?'Sign in with Google (top of this panel) to use your saved CV.':'Your saved CV could not be fetched. Check your connection and try again.');
     return null;
   }
   async function forget(){
