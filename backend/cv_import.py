@@ -194,6 +194,14 @@ def parse_cv_text(text:str)->dict:
         # "12 Example Road, Manchester M1 2AB": the word(s) just before the postcode.
         cm=re.search(r'([A-Z][A-Za-z\'-]+(?:[ -][A-Z][A-Za-z\'-]+)?)\s*,?\s*'+re.escape(pc.group(0)),head)
         if cm and not re.search(r'\d|road|street|lane|avenue|close|way|drive|court|house|flat',cm.group(1),re.I): city=cm.group(1)
+    # Street line: the part of the postcode line before the town ("12 Example Road, London E5 9PB").
+    address=None
+    if pc:
+        line=next((l for l in lines[:15] if pc.group(0) in l),'')
+        before=line.split(pc.group(0))[0]
+        if city:before=before.rsplit(city,1)[0]
+        before=re.split(r'[|·•]',before)[-1].strip(' ,')
+        if re.match(r'\d+[A-Za-z]?\s+\w|(?:flat|apartment|unit)\s+\d',before,re.I) and len(before)<=80:address=before
     if not city and re.search(r'\bLondon\b',head,re.I): city='London'
     if not city and re.search(r'\bLondon\b',flat,re.I): city='London'
     work_auth=None
@@ -245,7 +253,8 @@ def parse_cv_text(text:str)->dict:
         'linkedin':linkedin,'github':github,'website':website,
         'first_name':' '.join(parts[:-1]) if len(parts)>1 else full_name,
         'last_name':parts[-1] if parts else '',
-        'email':email,'phone':phone,'postcode':postcode,'city':city,'location':f'{city}, UK' if city else None,
+        'email':email,'phone':phone,'address':address,'postcode':postcode,'city':city,
+        'country':'United Kingdom' if postcode or (phone and phone.startswith('+44')) else None,'location':f'{city}, UK' if city else None,
         'right_to_work':'Yes' if work_auth and re.search(r'full right to work|right to work',work_auth,re.I) else None,
         'sponsorship':'No' if work_auth and re.search(r'full right to work',work_auth,re.I) else None,
         'work_authorisation':work_auth,

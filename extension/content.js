@@ -30,7 +30,7 @@ function containerLabel(el){
 function textFor(el){const direct=[];if(el.id){const l=document.querySelector(`label[for="${CSS.escape(el.id)}"]`);if(l)direct.push(l.innerText)}const wrapped=el.closest('label');if(wrapped)direct.push(wrapped.innerText);const lb=el.getAttribute('aria-labelledby');if(lb)lb.split(/\s+/).forEach(id=>{const t=document.getElementById(id);if(t&&t!==el)direct.push(t.innerText||t.textContent)});['aria-label','placeholder'].forEach(x=>{if(el.getAttribute(x))direct.push(el.getAttribute(x))});const clean=[...new Set(direct.map(x=>String(x||'').replace(/\s+/g,' ').trim()).filter(Boolean))];if(clean.length)return clean.join(' ');const cap=containerLabel(el);if(cap&&el.type!=='radio'&&el.type!=='checkbox')return cap;const seen=el.type!=='radio'&&el.type!=='checkbox'&&window.snapplyVisualLabel?.(el);if(seen)return seen;const fallback=[];['name','id'].forEach(x=>{if(el.getAttribute(x))fallback.push(el.getAttribute(x))});const g=el.closest('fieldset,.form-group,.field,.question,.control-group,[class*=employment],[class*=education]');if(g){const l=g.querySelector(':scope > legend,:scope > .label,:scope > .question-text,:scope > h3,:scope > h4');if(l)fallback.push(l.innerText)}return [...new Set(fallback)].join(' ').replace(/\s+/g,' ').trim()}
 function canonical(label,el=null){
   const wd=window.JobCopilotWorkday?.canonicalFrom?.(el); if(wd) return wd;
-  const text=String(label||'').replace(/\s+/g,' ').replace(/\s*\(required\)\s*$/i,'').replace(/\s*[✱*]+\s*$/,'').trim().split(' ').map(t=>/[._]|^[A-Z][a-z]+[A-Z]/.test(t)?t.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[._\[\]]+/g,' ').trim():t).join(' ');
+  const text=String(label||'').replace(/\s+/g,' ').replace(/\s*\(required\)\s*$/i,'').replace(/\s*[✱*]+\s*$/,'').replace(/^\s*[✱*]+\s*/,'').replace(/\s*\([^)]{20,}\)?\s*/g,' ').trim().split(' ').map(t=>/[._]|^[A-Z][a-z]+[A-Z]/.test(t)?t.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[._\[\]]+/g,' ').trim():t).join(' ');
   const id=String(el?.id||'').trim().toLowerCase();
   const name=String(el?.getAttribute?.('name')||'').trim().toLowerCase();
   const ac=String(el?.getAttribute?.('autocomplete')||'').trim().toLowerCase();
@@ -114,6 +114,12 @@ function setNativeValue(el,value){
 }
 
 function choose(el,value){const wanted=String(value).trim().toLowerCase();if(el.tagName==='SELECT'){const opts=[...el.options].filter(x=>x.value!=='');let o=opts.find(x=>[x.value,x.text].some(v=>String(v).trim().toLowerCase()===wanted));if(!o&&wanted.length>=3){const esc=wanted.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const near=opts.filter(x=>new RegExp(`^${esc}\\b|\\b${esc}\\s*\\(`,'i').test(x.text.trim()));if(near.length===1)o=near[0]}if(!o)return false;el.value=o.value;fire(el);return true}if(el.type==='radio'||el.type==='checkbox'){const label=textFor(el).toLowerCase(),own=String(el.value||'').toLowerCase();if(label.includes(wanted)||own===wanted||(value===true&&['yes','true','1','on'].includes(own))||(value===false&&['no','false','0'].includes(own))){el.click();return true}return false}el.focus();setNativeValue(el,value);return String(el.value)===String(value)}
+// A phone box with a fixed +44 in front ("the +44 represents the 0 of your mobile number") takes the
+// number without its leading 0 or country code.
+function phoneForField(key,label,value){
+  if(key!=='phone'||!value||!/\+\s?44/.test(label)||!/represents? the (?:first |leading )?0|without (?:the )?(?:first |leading )?0|(?:omit|drop|remove|leave out) the (?:first |leading )?0|no leading 0/i.test(label))return value;
+  return String(value).trim().replace(/^\+44\s?(?:\(0\)\s?)?|^0/,'');
+}
 function flatProfile(p){const loc=p.location||[p.city,p.country].filter(Boolean).join(', ');return {full_name:p.full_name||[p.first_name,p.last_name].filter(Boolean).join(' '),location:loc,linkedin:p.linkedin,github:p.github,website:p.website,application_source:p.application_source,first_name:p.first_name,last_name:p.last_name,email:p.email,country:p.country,phone_country_code:p.phone_country_code||p.country,phone:p.phone,phone_device_type:p.phone_device_type,phone_extension:p.phone_extension,address:p.address||p.address_line1,address_line2:p.address_line2,address_line3:p.address_line3,city:p.city,region:p.region||p.city,postcode:p.postcode,title:p.title,recent_nhs_experience:p.recent_nhs_experience,right_to_work:p.right_to_work,sponsorship:p.sponsorship,notice_period:p.notice_period,salary_expectation:p.salary_expectation}}
 function confidenceFor(key,value,el){if(key==='unknown'||value===undefined||value===null||value==='')return 'ASK_USER';if(key==='country'&&el?.tagName==='INPUT'&&el.tagName!=='SELECT')return 'MEDIUM';if(['supporting_statement','salary_expectation','notice_period','resume','title','application_source','phone_device_type'].includes(key))return 'MEDIUM';return 'HIGH'}
 function currentField(original){
@@ -131,7 +137,7 @@ function fill(profile){
  const decisions=new Map(reviewPlan(profile).map(item=>[item.index,item.decision]));
  for(let index=0;index<els.length;index++){
    const el=els[index];
-   const label=textFor(el),key=canonical(label,el),value=simple[key],questionType=classifyQuestion(label);
+   const label=textFor(el),key=canonical(label,el),value=phoneForField(key,label,simple[key]),questionType=classifyQuestion(label);
    // Never put the applicant's own details into rows about other people or other jobs
    // (TRAC referee/employer/education rows: "Referee's first name", "City / Town", "Telephone").
    if(/\.(gmrow|grrow)_\d+\./.test(el.id||'')||/referee|reference|next of kin|emergency contact/i.test(label)){out.push({label,key,questionType,decision:'SKIP',confidence:'SKIP',filled:false,reason:'Third-party or history row'});continue}

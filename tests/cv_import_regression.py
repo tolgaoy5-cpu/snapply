@@ -47,6 +47,7 @@ Customer service
 """
 p = parse_cv_text(modern)
 assert p['phone'] == '+44 7700 900789' and p['postcode'] == 'M1 2AB' and p['city'] == 'Manchester', {k: p[k] for k in ('phone', 'postcode', 'city')}
+assert p['address'] == '14 Mill Lane' and p['country'] == 'United Kingdom', (p['address'], p['country'])
 assert [(e['role'], e['employer'], e['dates']) for e in p['experience']] == [
     ('Store Supervisor', 'Fresh Market', '03/2021-Present'), ('Sales Assistant', 'City Books', '01/2019-02/2021')], p['experience']
 assert 'Ran a team of eight' in p['experience'][0]['evidence'], p['experience'][0]

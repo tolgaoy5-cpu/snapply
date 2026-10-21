@@ -165,7 +165,9 @@ async function checkSite(cdp, url) {
   const files = all.filter(f => f.kind === 'file');
   res.cvSlot = files.some(f => /cv|resume|résumé|curriculum/i.test(f.label)) || files.length === 1;
   res.cvAttached = files.some(f => f.filled);
-  res.verdict = res.error ? 'error' : res.login ? 'login needed' : !res.fields ? 'no form found'
+  // A form has at least two boxes to type in or choose from (not just cookie ticks or a search bar).
+  const formish = all.filter(f => (f.kind === 'text' || f.kind === 'select') && !/^search/i.test(f.label)).length >= 2;
+  res.verdict = res.error ? 'error' : res.login ? 'login needed' : !formish ? 'no form found'
     : !res.panel ? 'PANEL MISSING' : res.missedBasics.length ? 'BASICS MISSED' : res.cvSlot && !res.cvAttached ? 'CV MISSED' : 'ok';
   return res;
 }
