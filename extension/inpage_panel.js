@@ -14,14 +14,24 @@
   // Unrecognised sites still get the panel when the page (or a form frame inside it) has fields
   // Snapply knows, such as name, email and phone.
   const knownFields=()=>{try{return window.snapplyFormScore?.().known||0}catch(_){return 0}};
-  chrome.runtime.onMessage.addListener(m=>{if(m.type==='SNAPPLY_FORM_IN_FRAME'&&!opened)openPanel(detectNow())});
+  // A form with name/email/phone is not always a job application (registrations, checkouts, government
+  // forms). Unrecognised sites open the panel only when the page also looks like a job application;
+  // otherwise just the Snapply tab appears at the edge for the user to open.
+  const JOBBY=/\b(apply|application|applicant|career|careers|job|jobs|vacanc\w*|recruit\w*|hiring|position|candidate|cv|résumé|resume|cover letter|talent)\b/i;
+  const looksLikeJob=()=>{try{
+    if(JOBBY.test(location.href+' '+document.title))return true;
+    if(JOBBY.test([...document.querySelectorAll('h1,h2,h3,legend')].slice(0,30).map(h=>h.innerText).join(' ')))return true;
+    return [...document.querySelectorAll('input[type=file]')].some(f=>JOBBY.test(`${f.id} ${f.name} ${f.closest('div,section,fieldset')?.innerText||''}`));
+  }catch(_){return false}};
+  chrome.runtime.onMessage.addListener(m=>{if(m.type==='SNAPPLY_FORM_IN_FRAME'&&!opened)openPanel(detectNow(),!looksLikeJob())});
   (function waitForForm(){
     if(opened)return;
     const found=detectNow();
-    if(found!=='GENERIC'||knownFields()>=3)return openPanel(found);
+    if(found!=='GENERIC')return openPanel(found);
+    if(knownFields()>=3)return openPanel(found,!looksLikeJob());
     if(++tries<15)setTimeout(waitForForm,1000);
   })();
-  function openPanel(ats){
+  function openPanel(ats,collapsed=false){
   if(opened)return;opened=true;
 
   // Closing hides the panel for this page only; the next job or application opens it again.
@@ -119,7 +129,7 @@
   tab.addEventListener('click',open);
 
   (document.body||document.documentElement).append(host);
-  if(store.get())tab.classList.add('show');else open();
+  if(store.get()||collapsed)tab.classList.add('show');else open();
 
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='JC_PANEL_TOGGLE'){panel.classList.contains('open')?close():open();send({ok:true})}
