@@ -30,6 +30,8 @@
     const selectors=['main','article','[role="main"]','.job-description','.jobDescription','.vacancy','.vacancy-details','.posting','section'];
     const sc=el=>{const t=clean(el.textContent);if(t.length<120)return -1;let x=Math.min(t.length/1000,8);if(/responsibilit|essential|desirable|requirements?|person specification|about the role|job description/i.test(t))x+=8;return x};
     doc.querySelectorAll('script,style,noscript,nav,header,footer').forEach(n=>n.remove());
+    // Keep paragraph and bullet boundaries (a fetched page has no layout, so innerText is unavailable).
+    doc.querySelectorAll('p,li,br,h1,h2,h3,h4,h5,tr,div').forEach(n=>n.append(doc.createTextNode('\n')));
     const best=[...new Set(selectors.flatMap(sel=>[...doc.querySelectorAll(sel)]))].map(el=>({el,score:sc(el)})).sort((a,b)=>b.score-a.score)[0];
     const body=best&&best.score>0?best.el:doc.body;
     const text=String(body?.textContent||'').split(/\n+/).map(clean).filter(Boolean).join('\n').slice(0,30000);
