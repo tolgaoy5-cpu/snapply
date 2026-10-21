@@ -209,12 +209,17 @@ class SavedAnswerRequest(BaseModel):
     confirmed_at:str|None=None
     source:str='user_confirmed'
 
+CURRENT_PARSERS={'deterministic-v0.26.6','ai-verified-v1'}
+
+
 def _refresh_profile_from_saved_cv_if_needed():
     state=load_state()
     profile=state.get('master_profile') or {}
     parser=(profile.get('import_meta') or {}).get('parser')
     meta=get_saved_cv_meta(); content=get_saved_cv_bytes()
-    if parser=='deterministic-v0.26.6' or not meta or content is None:
+    # Profiles from a current importer are kept as they are (and keep the user's edits); only profiles
+    # from older importers are read again from the saved CV.
+    if parser in CURRENT_PARSERS or not meta or content is None:
         return state
     suffix=Path(meta.get('name') or 'cv.pdf').suffix.lower() or '.pdf'
     path=None

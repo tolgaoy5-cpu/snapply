@@ -89,3 +89,21 @@ def broken(_):
 
 assert with_ai_structure(dict(base), text, model=broken)['experience'] == base['experience']
 print('cv import ok')
+
+# A profile from the current importers is never re-read on every request (AI cost, lost edits).
+import os, tempfile  # noqa: E402
+with tempfile.TemporaryDirectory() as td:
+    os.environ['JOB_COPILOT_DATA_DIR'] = td
+    os.environ['SNAPPLY_MODE'] = ''
+    import server  # noqa: E402
+    from state_store import save_cv, set_master_profile  # noqa: E402
+    save_cv(b'%PDF-1.4 test', filename='cv.pdf', content_type='application/pdf')
+    calls = []
+    server.import_cv = lambda path: calls.append(path) or {'full_name': 'Re-read', 'import_meta': {'parser': 'ai-verified-v1'}}
+    for parser in ('ai-verified-v1', 'deterministic-v0.26.6'):
+        set_master_profile({'full_name': 'Kept', 'import_meta': {'parser': parser}})
+        assert server._refresh_profile_from_saved_cv_if_needed()['master_profile']['full_name'] == 'Kept', parser
+    assert calls == []
+    set_master_profile({'full_name': 'Old', 'import_meta': {'parser': 'deterministic-v0.20'}})
+    assert server._refresh_profile_from_saved_cv_if_needed()['master_profile']['full_name'] == 'Re-read' and len(calls) == 1
+print('profile refresh ok')
