@@ -9,14 +9,17 @@ const FIELD_RULES=[
  {key:'education',re:/university|college|institution|education/i},{key:'qualification',re:/\bdegree\b|qualification/i}
 ];
 function visible(el){const s=getComputedStyle(el);return s.display!=='none'&&s.visibility!=='hidden'&&el.offsetParent!==null}
-function structuralHelper(el){return !!(window.JobCopilotGreenhouse?.isGreenhouse?.()&&window.JobCopilotGreenhouse?.isReactSelectHelper?.(el))}
-function semanticElements(){return [...document.querySelectorAll('input,select,textarea')].filter(visible).filter(el=>!structuralHelper(el))}
+function structuralHelper(el){if(el.matches('.select2-focusser,.select2-input,.select2-offscreen'))return true;return !!(window.JobCopilotGreenhouse?.isGreenhouse?.()&&window.JobCopilotGreenhouse?.isReactSelectHelper?.(el))}
+function semanticElements(){return [...document.querySelectorAll('input,select,textarea')].filter(visible).filter(el=>!el.disabled&&!structuralHelper(el))}
 // The caption of the question a control sits in, for forms whose labels are not linked to the
 // control (Lever custom questions, many hand-built forms): nearest question container's label text.
+// A container holding several separate questions (often the whole form) has no single caption.
+function manyQuestions(box){const keys=new Set();for(const c of box.querySelectorAll('input:not([type=hidden]),select,textarea')){keys.add((c.type==='radio'||c.type==='checkbox')&&c.name?'g:'+c.name:c);if(keys.size>3)return true}return false}
 function containerLabel(el){
   const tidy=s=>String(s||'').replace(/\s+/g,' ').replace(/\s*[✱*]\s*$/,'').replace(/\(required\)/i,'').trim();
   for(const sel of ['.application-question','[data-qa*="question"]','fieldset','[role="group"]','[role="radiogroup"]','.form-group','.field','[class*="question"]','[class*="field"]']){
     const box=el.closest(sel);if(!box)continue;
+    if(manyQuestions(box))continue;
     for(const c of box.querySelectorAll('.application-label .text,.application-label,legend,label,[class*="label"],[class*="title"],h3,h4,h5')){
       if(c.contains(el)||c.querySelector('input,select,textarea'))continue;
       const t=tidy(c.innerText||c.textContent);if(t&&t.length<=300)return t;
@@ -24,13 +27,16 @@ function containerLabel(el){
   }
   return '';
 }
-function textFor(el){const direct=[];if(el.id){const l=document.querySelector(`label[for="${CSS.escape(el.id)}"]`);if(l)direct.push(l.innerText)}const wrapped=el.closest('label');if(wrapped)direct.push(wrapped.innerText);const lb=el.getAttribute('aria-labelledby');if(lb)lb.split(/\s+/).forEach(id=>{const t=document.getElementById(id);if(t&&t!==el)direct.push(t.innerText||t.textContent)});['aria-label','placeholder'].forEach(x=>{if(el.getAttribute(x))direct.push(el.getAttribute(x))});const clean=[...new Set(direct.map(x=>String(x||'').replace(/\s+/g,' ').trim()).filter(Boolean))];if(clean.length)return clean.join(' ');const cap=containerLabel(el);if(cap&&el.type!=='radio'&&el.type!=='checkbox')return cap;const fallback=[];['name','id'].forEach(x=>{if(el.getAttribute(x))fallback.push(el.getAttribute(x))});const g=el.closest('fieldset,.form-group,.field,.question,.control-group,[class*=employment],[class*=education]');if(g){const l=g.querySelector(':scope > legend,:scope > .label,:scope > .question-text,:scope > h3,:scope > h4');if(l)fallback.push(l.innerText)}return [...new Set(fallback)].join(' ').replace(/\s+/g,' ').trim()}
+function textFor(el){const direct=[];if(el.id){const l=document.querySelector(`label[for="${CSS.escape(el.id)}"]`);if(l)direct.push(l.innerText)}const wrapped=el.closest('label');if(wrapped)direct.push(wrapped.innerText);const lb=el.getAttribute('aria-labelledby');if(lb)lb.split(/\s+/).forEach(id=>{const t=document.getElementById(id);if(t&&t!==el)direct.push(t.innerText||t.textContent)});['aria-label','placeholder'].forEach(x=>{if(el.getAttribute(x))direct.push(el.getAttribute(x))});const clean=[...new Set(direct.map(x=>String(x||'').replace(/\s+/g,' ').trim()).filter(Boolean))];if(clean.length)return clean.join(' ');const cap=containerLabel(el);if(cap&&el.type!=='radio'&&el.type!=='checkbox')return cap;const seen=el.type!=='radio'&&el.type!=='checkbox'&&window.snapplyVisualLabel?.(el);if(seen)return seen;const fallback=[];['name','id'].forEach(x=>{if(el.getAttribute(x))fallback.push(el.getAttribute(x))});const g=el.closest('fieldset,.form-group,.field,.question,.control-group,[class*=employment],[class*=education]');if(g){const l=g.querySelector(':scope > legend,:scope > .label,:scope > .question-text,:scope > h3,:scope > h4');if(l)fallback.push(l.innerText)}return [...new Set(fallback)].join(' ').replace(/\s+/g,' ').trim()}
 function canonical(label,el=null){
   const wd=window.JobCopilotWorkday?.canonicalFrom?.(el); if(wd) return wd;
-  const text=String(label||'').replace(/\s+/g,' ').trim();
+  const text=String(label||'').replace(/\s+/g,' ').replace(/\s*\(required\)\s*$/i,'').replace(/\s*[✱*]+\s*$/,'').trim().split(' ').map(t=>/[._]|^[A-Z][a-z]+[A-Z]/.test(t)?t.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[._\[\]]+/g,' ').trim():t).join(' ');
   const id=String(el?.id||'').trim().toLowerCase();
   const name=String(el?.getAttribute?.('name')||'').trim().toLowerCase();
   const ac=String(el?.getAttribute?.('autocomplete')||'').trim().toLowerCase();
+  const idn=id.replace(/-/g,'_'),namen=name.replace(/-/g,'_');
+  if(['first_name','firstname','given_name'].includes(idn)||['first_name','firstname','given_name'].includes(namen)) return 'first_name';
+  if(['last_name','lastname','surname','family_name'].includes(idn)||['last_name','lastname','surname','family_name'].includes(namen)) return 'last_name';
 
   // Prefer stable semantic DOM hints over nearby row text. This is important on
   // Greenhouse where the Country React combobox can expose a label such as
@@ -499,8 +505,11 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     // Drag-and-drop upload areas (TalentLink and others) keep a hidden file input whose id names
     // the CV slot ("upload_attached_resume_13") while the visible label just says "upload file".
     const named=[...document.querySelectorAll('input[type="file"]')]
-      .filter(el=>/(^|[_-])(attached[_-])?resume|(^|[_-])cv([_-]|$)|curriculum/i.test(`${el.id} ${el.name} ${el.className}`)&&!/cover/i.test(`${el.id} ${el.name}`));
+      .filter(el=>/resume|(^|[^a-z])cv([^a-z]|$)|curriculum/i.test(`${el.id} ${el.name} ${el.className} ${el.parentElement?.innerText||''}`)&&!/cover/i.test(`${el.id} ${el.name}`));
     if(named.length===1)return named;
+    // A page with a single upload control that asks for a CV ("Upload your CV", "Browse") is the CV slot.
+    const files=[...document.querySelectorAll('input[type="file"]')];
+    if(files.length===1&&!/cover|certificate|transcript|portfolio|photo/i.test(textFor(files[0]))&&/\b(cv|resume|résumé|curriculum vitae)\b/i.test(document.body.innerText||''))return files;
     // Workday's visible Resume/Cover Letter drop zone uses one display:none
     // file input as its actual React change target. Require that exact structure
     // and a unique file input before assigning a user-requested saved CV.
@@ -736,4 +745,15 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     }
     if(m.type==='FIELD_HINTS'){window.__snapplyHints={...(window.__snapplyHints||{}),...(m.hints||{})};send({ok:true,count:Object.keys(window.__snapplyHints).length})}
   });
+})();
+
+// Application forms are sometimes embedded in an iframe (JobAdder, Greenhouse embeds, iCIMS…).
+// Every frame reports how many fields it can fill, so the panel talks to the frame with the form.
+function formScore(){const els=semanticElements();return {fields:els.length,known:els.filter(el=>canonical(textFor(el),el)!=='unknown').length}}
+window.snapplyFormScore=formScore;
+(function reportFormFrame(){
+  let last='';
+  const report=()=>{try{const s=formScore();if(!s.fields)return;const key=s.fields+':'+s.known;if(key===last)return;last=key;
+    const r=chrome.runtime.sendMessage({type:'SNAPPLY_FORM_FRAME',...s});if(r&&r.catch)r.catch(()=>{})}catch(_){}};
+  [0,1500,4000,9000].forEach(t=>setTimeout(report,t));
 })();

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Snapply",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Fills job applications from your CV, remembers your answers and drafts grounded AI answers — you review and submit.",
   "permissions": [
     "activeTab",
@@ -31,7 +31,8 @@
         "workday_date_repair.js"
       ],
       "run_at": "document_start",
-      "world": "MAIN"
+      "world": "MAIN",
+      "all_frames": true
     },
     {
       "matches": [
@@ -55,11 +56,13 @@
         "inpage_debug.js",
         "question_memory.js",
         "fill_fx.js",
+        "visual_label.js",
         "content.js",
         "page_questions.js",
         "inpage_panel.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "host_permissions": [

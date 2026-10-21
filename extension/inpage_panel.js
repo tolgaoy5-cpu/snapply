@@ -10,13 +10,19 @@
   if(window.top!==window||window.__JC_INPAGE_PANEL)return;
   window.__JC_INPAGE_PANEL=true;
   const detectNow=()=>window.JobCopilotAdapterRegistry?.detect?.(document,location)||'GENERIC';
-  let tries=0;
+  let tries=0,opened=false;
+  // Unrecognised sites still get the panel when the page (or a form frame inside it) has fields
+  // Snapply knows, such as name, email and phone.
+  const knownFields=()=>{try{return window.snapplyFormScore?.().known||0}catch(_){return 0}};
+  chrome.runtime.onMessage.addListener(m=>{if(m.type==='SNAPPLY_FORM_IN_FRAME'&&!opened)openPanel(detectNow())});
   (function waitForForm(){
+    if(opened)return;
     const found=detectNow();
-    if(found!=='GENERIC')return openPanel(found);
+    if(found!=='GENERIC'||knownFields()>=3)return openPanel(found);
     if(++tries<15)setTimeout(waitForForm,1000);
   })();
   function openPanel(ats){
+  if(opened)return;opened=true;
 
   // Closing hides the panel for this page only; the next job or application opens it again.
   const CLOSED_KEY='jcPanelClosed:'+location.hostname+location.pathname;
@@ -70,7 +76,7 @@
   const host=document.createElement('div');
   host.id='job-copilot-inpage';
   const root=host.attachShadow({mode:'closed'});
-  const atsLabel=ats.charAt(0)+ats.slice(1).toLowerCase();
+  const atsLabel=ats==='GENERIC'?'Application form':ats.charAt(0)+ats.slice(1).toLowerCase();
   root.innerHTML=`<style>${STYLE}</style>
   <section class="panel" role="complementary" aria-label="Snapply">
     <header class="bar">

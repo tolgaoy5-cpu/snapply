@@ -6,7 +6,18 @@ if(new URLSearchParams(location.search).has('embedded')){
   document.querySelectorAll('header h1,header .version').forEach(n=>n.style.display='none');
 }
 async function active(){const [t]=await chrome.tabs.query({active:true,currentWindow:true});return t}
-async function send(type,payload={}){const t=await active();return chrome.tabs.sendMessage(t.id,{type,...payload})}
+// Talk to the frame that holds the application form: usually the page itself, sometimes an iframe.
+const TOP_ONLY=new Set(['EXTRACT_JOB']);
+async function formFrame(tabId,type){
+  if(TOP_ONLY.has(type))return 0;
+  try{const f=await chrome.runtime.sendMessage({type:'SNAPPLY_FORM_FRAMES',tabId})||{};
+    const score=s=>s?s.known*1000+s.fields:0;let best=0;
+    for(const [id,s] of Object.entries(f))if(score(s)>score(f[best]))best=+id;
+    return best}catch(_){return 0}
+}
+async function send(type,payload={}){const t=await active();
+  if(type==='FILL_FX')return chrome.tabs.sendMessage(t.id,{type,...payload});
+  return chrome.tabs.sendMessage(t.id,{type,...payload},{frameId:await formFrame(t.id,type)})}
 function show(d){byId('out').textContent=JSON.stringify(d,null,2);if(d?.error)byId('summary').textContent=`Your input is needed · ${d.error}`} 
 // Plain-language cards for required fields that are not handled as questions above.
 const CARD_TEXT={

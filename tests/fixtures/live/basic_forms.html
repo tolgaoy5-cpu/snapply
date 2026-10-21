@@ -1,0 +1,25 @@
+<!-- Patterns from small employer / agency application forms seen live on 2026-10-21 (Get-Staffed on Bubble,
+     JobAdder, Appellia, ApplyBe). Structure only, no personal data. -->
+<style>.col{width:420px;margin:0 0 14px}.col input{display:block;width:400px}.row{display:flex;gap:8px;width:420px}</style>
+
+<!-- Bubble: captions are plain text above unlabeled inputs; yes/no questions are captioned by text above the group. -->
+<div id="bubble">
+  <div class="col"><div>First Name *</div><div><input id="first-name" type="text"></div></div>
+  <div class="col"><div>Last Name *</div><div><input id="last-name" type="text"></div></div>
+  <div class="col"><div>Mobile Phone *</div><div><input id="bubble-phone" type="text"></div></div>
+  <div class="col"><div>Question One *</div><div>Do you have the right to work in the UK?</div>
+    <div><input type="radio" name="bq1" id="bq1y" value="yes"><label for="bq1y">Yes</label> <input type="radio" name="bq1" id="bq1n" value="no"><label for="bq1n">No</label></div></div>
+  <div class="col"><div>Upload your CV *</div><div><button type="button">Browse</button><input type="file" id="bubble-cv" style="opacity:0;width:80px"></div></div>
+</div>
+
+<!-- JobAdder: one container wraps the whole form under a "Please complete…" title; the phone label points at a
+     hidden field and sits above a country picker that shares the row; select2 adds helper inputs. -->
+<form id="jobadder"><div class="form-field"><div class="title">Please complete the form below to apply for this position</div>
+  <div class="form-field"><label for="Email">Email</label><input id="Email" name="Email" type="text"></div>
+  <div class="form-field"><label for="CandidatePhone">Phone</label>
+    <div class="phone-number"><div class="row"><div class="select2-container" style="width:60px"><input class="select2-focusser select2-offscreen" type="text" id="s2id_autogen2"></div>
+      <input id="CandidatePhone_FormattedNumber" name="CandidatePhone.FormattedNumber" type="text" style="width:300px"></div></div></div>
+  <div class="form-field"><label for="HomePhone">Home phone</label><input id="HomePhone" name="HomePhone" type="text"></div>
+  <div class="form-field"><textarea id="info" disabled>If you are an internal candidate please apply through the staff portal.</textarea></div>
+  <div class="form-field"><label for="Postcode">Post Code *</label><input id="Postcode" name="Postcode" type="text"></div>
+</div></form>

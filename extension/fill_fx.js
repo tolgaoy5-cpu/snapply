@@ -20,7 +20,7 @@
   }
 
   function ensureToast() {
-    if (!top || toast) return;
+    if (toast) return;
     host = document.createElement('div');
     host.id = 'snapply-fill-toast';
     host.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483646;pointer-events:none';
@@ -40,7 +40,8 @@
   }
 
   function render(done) {
-    if (!top) return;
+    // Frames show the toast only when the form being filled is theirs.
+    if (!top && !count) return;
     // A form inside a frame fills there; the top page then has nothing to report.
     if (done && !count) { if (toast) toast.classList.remove('on'); return; }
     ensureToast();

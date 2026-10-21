@@ -11,13 +11,13 @@
   const stripStar=s=>clean(s).replace(/\s*\(required\)\s*$/i,'').replace(/\s*\*\s*$/,'');
 
   // Profile-driven fields are filled elsewhere; these are not "questions".
-  const PROFILE_KEYS=new Set(['full_name','location','linkedin','github','website','first_name','last_name','email','phone','phone_country_code','phone_extension','phone_device_type','country','postcode','city','address','address_line2','address_line3','title','resume','employer','job_title','start_date','end_date','education','qualification','application_source']);
+  const PROFILE_KEYS=new Set(['full_name','location','linkedin','github','website','first_name','last_name','email','phone','phone_secondary','phone_country_code','phone_extension','phone_device_type','country','postcode','city','address','address_line2','address_line3','title','resume','employer','job_title','start_date','end_date','education','qualification','application_source']);
 
   function legendFor(el){return clean(el.closest('fieldset')?.querySelector('legend')?.innerText||'')}
   // Group caption: <legend>, or an ARIA group's aria-labelledby / aria-label (TRAC radio groups).
   function groupLabel(el){
     const legend=legendFor(el);if(legend)return legend;
-    const g=el.closest('[role="group"],[role="radiogroup"]');if(!g)return containerLabelPQ(el);
+    const g=el.closest('[role="group"],[role="radiogroup"]');if(!g)return containerLabelPQ(el)||window.snapplyVisualLabel?.(el)||'';
     const ids=(g.getAttribute('aria-labelledby')||'').split(/\s+/).filter(Boolean);
     const byIds=ids.map(id=>document.getElementById(id)?.innerText||'').join(' ');
     return clean(byIds||g.getAttribute('aria-label')||'')||containerLabelPQ(el);
@@ -28,6 +28,7 @@ function containerLabelPQ(el){
   const tidy=s=>String(s||'').replace(/\s+/g,' ').replace(/\s*[✱*]\s*$/,'').replace(/\(required\)/i,'').trim();
   for(const sel of ['.application-question','[data-qa*="question"]','fieldset','[role="group"]','[role="radiogroup"]','.form-group','.field','[class*="question"]','[class*="field"]']){
     const box=el.closest(sel);if(!box)continue;
+    if(typeof manyQuestions==='function'&&manyQuestions(box))continue;
     for(const c of box.querySelectorAll('.application-label .text,.application-label,legend,label,[class*="label"],[class*="title"],h3,h4,h5')){
       if(c.contains(el)||c.querySelector('input,select,textarea'))continue;
       const t=tidy(c.innerText||c.textContent);if(t&&t.length<=300)return t;
