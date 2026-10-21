@@ -226,6 +226,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
 // V0.8 commands: active-page job extraction + conservative repeated block fill.
 chrome.runtime.onMessage.addListener((m,_s,send)=>{
  if(m.type==='EXTRACT_JOB') send(window.JobCopilotJobExtractor?.extract?.()||{error:'Job extractor unavailable'});
+ if(m.type==='EXTRACT_POSTING'){Promise.resolve(window.JobCopilotJobExtractor?.posting?.()||{error:'Job extractor unavailable'}).then(send).catch(e=>send({error:e.message}))}
  if(m.type==='REPEATED_BLOCK_PLAN') send({items:window.JobCopilotRepeated?.plan?.(m.profile||[])||[]});
  if(m.type==='FILL_REPEATED_SAFE'){Promise.resolve(window.JobCopilotRepeated?.fill?.(m.profile||[])||[]).then(results=>send({results})).catch(e=>send({error:e.message}));return true}
  return true;
@@ -609,7 +610,8 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     return {ok:true,el,allowed};
   }
   async function attachCoverLetter(payload){
-    if(location.href!==payload?.expected_url)return {ok:false,reason:'Job page changed since the cover letter was generated.'};
+    // In a form frame the panel has already checked the tab's address; the frame's own address differs.
+    if(window===window.top&&location.href!==payload?.expected_url)return {ok:false,reason:'Job page changed since the cover letter was generated.'};
     if(!payload?.base64||!payload?.name||!/^Cover-Letter-[a-zA-Z0-9-]+\.(pdf|docx)$/.test(payload.name))
       return {ok:false,reason:'Validated cover letter document is missing.'};
     const field=uploadField();if(!field.ok)return field;
@@ -639,7 +641,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
   }
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='COVER_LETTER_UPLOAD_FORMATS'){
-      if(location.href!==m.expected_url){send({ok:false,reason:'Job page changed since the cover letter was generated.'});return true}
+      if(window===window.top&&location.href!==m.expected_url){send({ok:false,reason:'Job page changed since the cover letter was generated.'});return true}
       const field=uploadField();
       send(field.ok?{ok:!!field.allowed.length,formats:field.allowed,reason:field.allowed.length?null:'This upload field does not accept PDF or DOCX.'}:{ok:false,reason:field.reason});
       return true;

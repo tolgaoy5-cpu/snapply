@@ -7,7 +7,7 @@ if(new URLSearchParams(location.search).has('embedded')){
 }
 async function active(){const [t]=await chrome.tabs.query({active:true,currentWindow:true});return t}
 // Talk to the frame that holds the application form: usually the page itself, sometimes an iframe.
-const TOP_ONLY=new Set(['EXTRACT_JOB']);
+const TOP_ONLY=new Set(['EXTRACT_JOB','EXTRACT_POSTING']);
 async function formFrame(tabId,type){
   if(TOP_ONLY.has(type))return 0;
   try{const f=await chrome.runtime.sendMessage({type:'SNAPPLY_FORM_FRAMES',tabId})||{};
@@ -407,6 +407,7 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   // Questions listed under "Your input is needed" are not repeated as generic cards.
   cards(required.items.filter(x=>x.status!=='COMPLETE'&&!answers.askedIds.has(x.id)&&!answers.askedIds.has('radio:'+x.name)));
   await renderDocumentAsks();
+  await renderCoverLetterAsk();
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
   // Bring what needs the user into view: their questions first, otherwise the review results.
   (answers.ask||answers.optional?byId('askTitle'):byId('askState').textContent?byId('askState'):byId('requiredState')).scrollIntoView({behavior:'smooth',block:'start'});
@@ -621,6 +622,43 @@ byId('tracEmployerFill').onclick=async()=>{try{
   show(r);
 }catch(e){show({error:e.message})}};
 
+// An upload area for a cover letter: offer to write one from the CV for this job and attach it as a PDF.
+async function renderCoverLetterAsk(){
+  const slots=(await send('DOCUMENT_SLOTS').catch(()=>null))?.details||[];
+  if(!slots.some(s=>s.category==='cover_letter'&&!s.filled))return;
+  const st=el('div',{className:'muted',textContent:'This application asks for a cover letter. Snapply writes one for this job from your CV, checks every sentence against it, and attaches it as a PDF.'});
+  const body=el('textarea',{rows:12,hidden:true,ariaLabel:'Cover letter'});
+  const write=el('button',{className:'primary-small',textContent:'✦ Write it for me'});
+  const attach=el('button',{textContent:'Attach as PDF',hidden:true});
+  const card=el('div',{className:'ask-card'},[el('b',{textContent:'Cover letter'}),st,body,el('div',{className:'row'},[write,attach])]);
+  write.onclick=async()=>{
+    write.disabled=true;st.className='muted';st.textContent='Reading the job advert and matching it to your CV…';
+    try{
+      const {capture,job}=await resolveCurrentJob();
+      if(!job.requirement_count)throw new Error('Could not find the job description. Open the job advert once, then press Fill this page again.');
+      const draft=await window.JobCopilotAPI.post('/v1/cover-letter/generate',{job,transferable:false,length:'standard'});
+      if(draft.status!=='REVIEW')throw new Error(draft.reason||'Could not write a letter for this job.');
+      await chrome.storage.local.set({coverLetterDraft:{job:draft.job,body:draft.body,own:draft.mode==='transferable'},...(capture.error?{}:{currentJob:job})});
+      body.value=draft.body;body.hidden=false;attach.hidden=false;write.textContent='Write again';
+      st.textContent='Written only from your CV. Read it, change anything you like, then attach it.';
+    }catch(e){
+      st.className='block';st.textContent=e.message;
+      if(/\bPro\b/.test(e.message)&&!card.querySelector('a'))card.append(el('a',{href:'https://snapply.co.uk/#pricing',target:'_blank',textContent:'See Pro plans'}));
+    }finally{write.disabled=false}
+  };
+  attach.onclick=async()=>{
+    attach.disabled=true;
+    try{
+      const {coverLetterDraft}=await chrome.storage.local.get('coverLetterDraft');
+      byId('coverLetterBody').value=body.value;
+      const r=await attachReviewedCoverLetter({...coverLetterDraft,body:body.value,own:coverLetterDraft?.own||body.value.trim()!==String(coverLetterDraft?.body||'').trim()});
+      st.className=r?.ok?'done':'block';st.textContent=byId('coverLetterState').textContent;
+      if(r?.ok){attach.hidden=true;body.hidden=true}
+    }catch(e){st.className='block';st.textContent=e.message}finally{attach.disabled=false}
+  };
+  byId('cards').prepend(card);
+}
+
 async function attachReviewedCoverLetter(draft){
   const activePage=await active();
   if(activePage.url!==draft?.job?.url)throw new Error('The active job page changed. Generate a letter for this page.');
@@ -645,7 +683,8 @@ async function attachReviewedCoverLetter(draft){
 
 // The job this page belongs to: analysed here, or the saved posting for this application.
 async function resolveCurrentJob(){
-  const capture=await send('EXTRACT_JOB');
+  // The advert behind this page: the page itself, its /apply-less posting, or a matching ad read recently.
+  const capture=await send('EXTRACT_POSTING');
   if(capture.error){
     const saved=await currentJob();
     if(!savedPostingForApplication(saved,capture.url))throw new Error('Open this job posting and click Read job description once, then return to the application.');

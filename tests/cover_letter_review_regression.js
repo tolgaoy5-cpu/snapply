@@ -12,7 +12,7 @@ async function setup(draftOverrides={}) {
   const context = {byId, show:()=>{}, active:async()=>({url}), currentJob:async()=>null,
     savedPostingForApplication:()=>false,
     chrome:{storage:{local:{set:async x=>Object.assign(storage,x),get:async()=>storage}}},
-    send:async(type,payload)=>{calls.push({type,payload}); if(type==='EXTRACT_JOB')return job;
+    send:async(type,payload)=>{calls.push({type,payload}); if(type==='EXTRACT_JOB'||type==='EXTRACT_POSTING')return job;
       if(type==='COVER_LETTER_UPLOAD_FORMATS')return {ok:true,formats:['pdf']};
       if(type==='ATTACH_COVER_LETTER')return {ok:true,name:'letter.pdf'};
       throw Error(type);},
