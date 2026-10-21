@@ -94,7 +94,8 @@ const FRAME_STATS = `(()=>{
     if(e.type==='password'){fields.push({kind:'password',label:lab(e),filled:!!e.value});continue}
     fields.push({kind:e.tagName==='SELECT'?'select':'text',label:lab(e),filled:!!String(e.value||'').trim()});
   }
-  return {url:location.href,fields};
+  // Upload widgets (Dropzone and others) take the file and swap in an empty input; the file name on the page shows it arrived.
+  return {url:location.href,fields,cvShown:(document.body?.innerText||'').includes('Sam-Taylor-CV')};
 })()`;
 const BASIC = /\b(first|last|given|family|sur|full)\s*-?name\b|^name\b|e-?mail|phone|mobile|telephone|post\s*code|zip/i;
 const SECONDARY = /home|work|other|alternative|secondary|evening|day\s*time|landline|confirm|re-?enter|verify|referee|reference|emergency|next of kin/i;
@@ -164,7 +165,7 @@ async function checkSite(cdp, url) {
   res.missedBasics = all.filter(f => f.kind === 'text' && !f.filled && BASIC.test(f.label) && !SECONDARY.test(f.label)).map(f => f.label);
   const files = all.filter(f => f.kind === 'file');
   res.cvSlot = files.some(f => /cv|resume|résumé|curriculum/i.test(f.label)) || files.length === 1;
-  res.cvAttached = files.some(f => f.filled);
+  res.cvAttached = files.some(f => f.filled) || (res.frames || []).some(f => f.cvShown);
   // A form has at least two boxes to type in or choose from (not just cookie ticks or a search bar).
   const formish = all.filter(f => (f.kind === 'text' || f.kind === 'select') && !/^search/i.test(f.label)).length >= 2;
   res.verdict = res.error ? 'error' : res.login ? 'login needed' : !formish ? 'no form found'
@@ -205,7 +206,7 @@ async function main() {
   const exited = new Promise(r => chrome.once('exit', r));
   chrome.kill(); await Promise.race([exited, sleep(5000)]);
   try {fs.rmSync(profile, {recursive: true, force: true})} catch {}
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = new Date().toISOString().slice(0, 16).replace(':', '');
   fs.writeFileSync(path.join(OUT, `${stamp}.json`), JSON.stringify(results, null, 2));
   const counts = results.reduce((a, r) => (a[r.verdict] = (a[r.verdict] || 0) + 1, a), {});
   const lines = [`# Snapply live check · ${stamp}`, '', `Pages: ${results.length} · ` + Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join(' · '), '',
