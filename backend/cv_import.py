@@ -7,9 +7,21 @@ from __future__ import annotations
 import re, json
 from pathlib import Path
 
-DATE_RANGE = re.compile(r'(?P<start>\d{2}/\d{4})\s*[–—-]\s*(?P<end>Present|Current|\d{2}/\d{4})', re.I)
+_MONTH = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?'
+_WHEN = rf'(?:\d{{1,2}}/\d{{4}}|{_MONTH}\s+\d{{4}}|(?:19|20)\d{{2}})'
+DATE_RANGE = re.compile(rf'(?P<start>{_WHEN})\s*(?:[–—-]|to)\s*(?P<end>Present|Current|Now|To date|{_WHEN})', re.I)
 EMAIL = re.compile(r'[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}')
-PHONE = re.compile(r'(?<!\d)(?:\+?44\s?\d{9,10}|0?7\d{9})(?!\d)')
+# UK numbers as people write them: 07700 900123, 07700-900-123, +44 7700 900123, +44 (0)20 7946 0000, 020 7946 0000.
+PHONE = re.compile(r'(?<![\d+])(?:\+44\s?(?:\(0\)\s?)?|0)\d(?:[\s-]?\d){8,9}(?!\d)')
+POSTCODE = re.compile(r'\b([A-Z]{1,2}\d[A-Z\d]?)\s?(\d[A-Z]{2})\b')
+# Section headings as CVs commonly write them (a short line on its own, any case, optional colon).
+SECTION_ALIASES = {
+    'experience': r'(?:professional |work |employment |career |relevant |working )?(?:experience|history)|employment(?: history)?|work history|career history',
+    'education': r'education(?: (?:and|&) (?:training|qualifications))?|academic (?:background|qualifications|history)|qualifications',
+    'certs': r'certificat\w*(?: (?:and|&) training)?|training(?: (?:and|&) (?:development|certifications))?|courses|licen[cs]es(?: (?:and|&) certifications)?|professional development',
+    'languages': r'languages?',
+    'other': r'(?:professional )?(?:summary|profile)|personal (?:statement|profile)|about me|objective|(?:key |core |technical )?skills|competenc\w*|references?|interests|hobbies|achievements|projects|volunteering|awards|additional information',
+}
 SECTION_NAMES = ['PROFESSIONAL SUMMARY','PROFESSIONAL EXPERIENCE','EDUCATION','CERTIFICATES & TRAINING','LANGUAGES','REFERENCES']
 
 def clean_lines(text:str)->list[str]:
@@ -51,21 +63,51 @@ def section_lines(lines:list[str], start:str, end_candidates:list[str])->list[st
             pass
     return lines[s:e]
 
+def section_kind(line:str)->str|None:
+    t=line.strip().rstrip(':').strip()
+    if not t or len(t)>45:
+        return None
+    for kind,pat in SECTION_ALIASES.items():
+        if re.fullmatch(pat,t,re.I):
+            return kind
+    return None
+
+
+def sections(lines:list[str])->dict[str,list[str]]:
+    """Lines under each recognised heading, up to the next heading of any kind."""
+    out:dict[str,list[str]]={};current=None
+    for ln in lines:
+        k=section_kind(ln)
+        if k:
+            current=k;out.setdefault(k,[]);continue
+        if current:
+            out[current].append(ln)
+    return out
+
+
 def parse_name(lines:list[str])->str|None:
     for s in lines[:12]:
-        if s and '@' not in s and len(s.split()) in range(2,6) and not any(k in s.upper() for k in SECTION_NAMES):
+        if s and '@' not in s and not re.search(r'\d',s) and len(s.split()) in range(2,6) and not any(k in s.upper() for k in SECTION_NAMES) and not section_kind(s):
             return s
     return None
 
+def _strip_dates(line:str)->str:
+    return DATE_RANGE.sub('',line).strip(' |,-–—')
+
+
 def _looks_like_heading(line:str, kind:str)->bool:
     s=line.strip()
-    if not s or DATE_RANGE.search(s) or s.startswith(('•','-','–','—')):
+    if DATE_RANGE.search(s) and len(_strip_dates(s))>3:
+        s=_strip_dates(s)
+    elif DATE_RANGE.search(s):
+        return False
+    if not s or s.startswith(('•','-','–','—')):
         return False
     if len(s)>180 or s.endswith(('.', ';')):
         return False
     if kind=='experience':
         # Experience headings in conventional CVs usually separate role and employer with a comma.
-        return ',' in s and not re.search(r'\b(?:through|while|with|and|supporting|demonstrating|maintaining|coordinating)\b', s, re.I)
+        return bool(re.search(r',| at | \| | [–—-] ', s)) and not re.search(r'\b(?:through|while|with|and|supporting|demonstrating|maintaining|coordinating)\b', s, re.I)
     # Education headings commonly contain degree markers and/or an institution name.
     return bool(re.search(r'\b(?:BSc|BA|MSc|MA|MBA|PhD|Bachelor|Master|University|College|School)\b', s, re.I))
 
@@ -75,8 +117,8 @@ def _find_heading_indices(lines:list[str], kind:str)->list[int]:
     for i,line in enumerate(lines):
         if _looks_like_heading(line,kind):
             # Require a date range before the next plausible heading. This avoids treating prose as a heading.
-            j=i+1; found_date=False
-            while j<len(lines):
+            j=i+1; found_date=bool(DATE_RANGE.search(line))
+            while j<len(lines) and not found_date:
                 if j!=i+1 and _looks_like_heading(lines[j],kind):
                     break
                 if DATE_RANGE.search(lines[j]):
@@ -86,19 +128,25 @@ def _find_heading_indices(lines:list[str], kind:str)->list[int]:
     return out
 
 
+def _dates(m)->str:
+    from cv_ai import to_month_year
+    return f"{to_month_year(m.group('start'))}-{to_month_year(m.group('end'))}"
+
+
 def _parse_dated_entries(lines:list[str], kind:str)->list[dict]:
     headings=_find_heading_indices(lines,kind)
     out=[]
     for idx,hidx in enumerate(headings):
         next_h=headings[idx+1] if idx+1<len(headings) else len(lines)
-        date_idx=None; m=None
-        for j in range(hidx+1,next_h):
+        date_idx=None; m=DATE_RANGE.search(lines[hidx])
+        if m: date_idx=hidx
+        for j in ([] if m else range(hidx+1,next_h)):
             dm=DATE_RANGE.search(lines[j])
             if dm:
                 date_idx=j; m=dm; break
         if date_idx is None or m is None:
             continue
-        heading=lines[hidx].strip(' ,-')
+        heading=_strip_dates(lines[hidx]).strip(' ,-|')
         country=None
         # Country is often on the line immediately after the date in PDF text extraction.
         if date_idx+1<next_h:
@@ -108,15 +156,16 @@ def _parse_dated_entries(lines:list[str], kind:str)->list[dict]:
         # Preserve all actual bullet/prose evidence between heading and next heading, excluding date/country lines.
         body_lines=[]
         for j in range(hidx+1,next_h):
-            if j==date_idx: continue
+            if j==date_idx and j!=hidx: continue
             if country and j==date_idx+1: continue
             body_lines.append(lines[j])
         body=' '.join(body_lines).strip()
         if kind=='experience':
-            parts=[x.strip() for x in heading.split(',',1)]
+            parts=[x.strip() for x in re.split(r',| at | \| | [–—-] ',heading,maxsplit=1)]
             role=parts[0] if parts else heading
             employer=parts[1] if len(parts)>1 else ''
-            rec={'role':role,'employer':employer,'dates':f"{m.group('start')}-{m.group('end')}",'country':country,'evidence':body[:2200]}
+            employer=re.split(r',| \| ',employer)[0].strip()
+            rec={'role':role,'employer':employer,'dates':_dates(m),'country':country,'evidence':body[:2200]}
         else:
             # Split on the last comma so degree names can themselves contain punctuation.
             if ',' in heading:
@@ -127,7 +176,7 @@ def _parse_dated_entries(lines:list[str], kind:str)->list[dict]:
             # Conservative field-of-study extraction for common degree titles.
             fm=re.search(r'\b(?:BSc|BA|MSc|MA|MBA|Bachelor(?:\'s)?|Master(?:\'s)?)\s+(?:of|in)?\s*(.+)$',degree,re.I)
             if fm: field=fm.group(1).strip()
-            rec={'degree':degree,'institution':institution,'field':field,'dates':f"{m.group('start')}-{m.group('end')}",'country':country,'evidence':body[:2200]}
+            rec={'degree':degree,'institution':institution,'field':field,'dates':_dates(m),'country':country,'evidence':body[:2200]}
         out.append(rec)
     return out
 
@@ -135,24 +184,35 @@ def parse_cv_text(text:str)->dict:
     lines=clean_lines(text); flat='\n'.join(lines)
     full_name=parse_name(lines) or ''; parts=full_name.split()
     email=(EMAIL.search(flat).group(0) if EMAIL.search(flat) else None)
-    phone=(PHONE.search(flat).group(0) if PHONE.search(flat) else None)
-    city='London' if re.search(r'\bLondon\b',flat,re.I) else None
+    pm=PHONE.search('\n'.join(lines[:15])) or PHONE.search(flat)
+    phone=re.sub(r'\s+',' ',pm.group(0)).strip() if pm else None
+    head='\n'.join(lines[:15])
+    pc=POSTCODE.search(head)
+    postcode=f'{pc.group(1)} {pc.group(2)}' if pc else None
+    city=None
+    if pc:
+        # "12 Example Road, Manchester M1 2AB": the word(s) just before the postcode.
+        cm=re.search(r'([A-Z][A-Za-z\'-]+(?:[ -][A-Z][A-Za-z\'-]+)?)\s*,?\s*'+re.escape(pc.group(0)),head)
+        if cm and not re.search(r'\d|road|street|lane|avenue|close|way|drive|court|house|flat',cm.group(1),re.I): city=cm.group(1)
+    if not city and re.search(r'\bLondon\b',head,re.I): city='London'
+    if not city and re.search(r'\bLondon\b',flat,re.I): city='London'
     work_auth=None
     for ln in lines:
         if re.search(r'full right to work|graduate visa|right to work',ln,re.I):
             work_auth=ln; break
 
-    exp_lines=section_lines(lines,'PROFESSIONAL EXPERIENCE',['EDUCATION'])
-    edu_lines=section_lines(lines,'EDUCATION',['CERTIFICATES & TRAINING','LANGUAGES'])
-    cert_lines=section_lines(lines,'CERTIFICATES & TRAINING',['LANGUAGES','REFERENCES'])
-    lang_lines=section_lines(lines,'LANGUAGES',['REFERENCES'])
+    sec=sections(lines)
+    exp_lines=sec.get('experience') or section_lines(lines,'PROFESSIONAL EXPERIENCE',['EDUCATION'])
+    edu_lines=sec.get('education') or section_lines(lines,'EDUCATION',['CERTIFICATES & TRAINING','LANGUAGES'])
+    cert_lines=sec.get('certs') or section_lines(lines,'CERTIFICATES & TRAINING',['LANGUAGES','REFERENCES'])
+    lang_lines=sec.get('languages') or section_lines(lines,'LANGUAGES',['REFERENCES'])
 
     experiences=_parse_dated_entries(exp_lines,'experience')
     education=_parse_dated_entries(edu_lines,'education')
     unresolved=[]
     for i,rec in enumerate(experiences):
         start,end=rec['dates'].split('-',1)
-        if end.lower() not in {'present','current'}:
+        if end.lower() not in {'present','current'} and '/' in start and '/' in end:
             sm,sy=map(int,start.split('/')); em,ey=map(int,end.split('/'))
             if (ey,em)<(sy,sm):
                 rec['needs_confirmation']=True
@@ -185,7 +245,7 @@ def parse_cv_text(text:str)->dict:
         'linkedin':linkedin,'github':github,'website':website,
         'first_name':' '.join(parts[:-1]) if len(parts)>1 else full_name,
         'last_name':parts[-1] if parts else '',
-        'email':email,'phone':phone,'city':city,'location':f'{city}, UK' if city else None,
+        'email':email,'phone':phone,'postcode':postcode,'city':city,'location':f'{city}, UK' if city else None,
         'right_to_work':'Yes' if work_auth and re.search(r'full right to work|right to work',work_auth,re.I) else None,
         'sponsorship':'No' if work_auth and re.search(r'full right to work',work_auth,re.I) else None,
         'work_authorisation':work_auth,
@@ -200,8 +260,32 @@ def import_cv(path:str|Path)->dict:
     elif ext in {'.txt','.md'}: text=p.read_text(errors='ignore')
     else: raise ValueError('Importer supports PDF, DOCX, TXT and MD.')
     out=parse_cv_text(text)
+    out=with_ai_structure(out,text)
     out.setdefault('import_meta',{}).update({'source_format':ext.lstrip('.'),'source_file':p.name})
     return out
+
+
+def with_ai_structure(profile:dict,text:str,model=None)->dict:
+    """Replace rule-based roles/education with the AI reading when it finds more (values verified against
+    the CV text in cv_ai). Without a configured model, or if it fails, the rule-based result stands."""
+    try:
+        from cv_ai import structure
+        from llm_provider import model_configured
+        if model is None and not model_configured():
+            return profile
+        ai=structure(text) if model is None else structure(text,model=model)
+    except Exception:
+        profile.setdefault('import_meta',{})['ai_structure']='failed'
+        return profile
+    if len(ai['experience'])+len(ai['education'])<len(profile.get('experience') or [])+len(profile.get('education') or []):
+        profile.setdefault('import_meta',{})['ai_structure']='kept rules (found less)'
+        return profile
+    profile['experience']=ai['experience'];profile['education']=ai['education']
+    if ai['certifications']:profile['certifications']=ai['certifications']
+    if ai['languages']:profile['languages']=ai['languages']
+    if ai['skills']:profile['skills']=ai['skills']
+    profile.setdefault('import_meta',{}).update({'parser':'ai-verified-v1','ai_dropped_values':ai['dropped_values']})
+    return profile
 
 if __name__=='__main__':
     import argparse
