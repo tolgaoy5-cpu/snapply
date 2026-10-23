@@ -25,3 +25,5 @@ curl -sf -F "file=@$DATA/Sam-Taylor-CV.pdf;type=application/pdf" "http://127.0.0
 ARGS=(--count "${1:-30}")
 [ "${1:-}" = "--urls" ] && ARGS=(--urls "$2")
 node "$ROOT/scripts/e2e/live.mjs" --chrome "$CHROME" --ext "$ROOT/extension" --api "http://127.0.0.1:$PORT" --out "$E2E/reports" "${ARGS[@]}"
+# What the server received from the extension's anonymous fill counts (same numbers real users send).
+(cd "$ROOT/backend" && JOB_COPILOT_DATA_DIR="$DATA" "$PY" admin.py fills 1)

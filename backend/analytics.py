@@ -49,3 +49,48 @@ def summary(days: int = 30) -> dict:
                 totals.setdefault(name, {}).setdefault(source, 0)
                 totals[name][source] += n
     return totals
+
+
+# Fill quality per site: after each "Fill this page" the extension sends counts only (no values,
+# no labels, no page path, no user id), so sites where Snapply fills poorly can be found and fixed.
+FILL_FIELDS = ("detected", "filled", "required_total", "required_missing", "cv_slots", "cv_attached")
+
+
+def _clean_host(host: str) -> str:
+    host = re.sub(r"[^a-z0-9.-]", "", str(host or "").lower())
+    return (host[4:] if host.startswith("www.") else host)[:80] or "unknown"
+
+
+def record_fill(host: str, ats: str = "", **counts: int) -> None:
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    path = data_root() / "fills" / f"{day}.json"
+    with _LOCK:
+        try:
+            data = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            data = {}
+        row = data.setdefault(_clean_host(host), {"fills": 0, **{k: 0 for k in FILL_FIELDS}})
+        row["fills"] += 1
+        for k in FILL_FIELDS:
+            row[k] = row.get(k, 0) + max(0, min(500, int(counts.get(k) or 0)))
+        if ats:
+            row["ats"] = _clean_source(ats)
+        _write_json(path, data)
+
+
+def fill_summary(days: int = 7) -> dict:
+    totals: dict = {}
+    today = datetime.now(timezone.utc).date()
+    for i in range(days):
+        day = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        try:
+            data = json.loads((data_root() / "fills" / f"{day}.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        for host, row in data.items():
+            t = totals.setdefault(host, {"fills": 0, **{k: 0 for k in FILL_FIELDS}})
+            t["fills"] += row.get("fills", 0)
+            for k in FILL_FIELDS:
+                t[k] += row.get(k, 0)
+            t["ats"] = row.get("ats", t.get("ats", ""))
+    return totals

@@ -6,6 +6,7 @@
     fly ssh console --app snapply-api -C "python admin.py waitlist"
     fly ssh console --app snapply-api -C "python admin.py stats 30"          (funnel counts by source)
     fly ssh console --app snapply-api -C "python admin.py reports"          (then: report <file name>)
+    fly ssh console --app snapply-api -C "python admin.py fills 7"          (fill rate per site, worst first)
 
 grant-pro gives a complimentary Pro plan (no Stripe subscription). The person must have signed in
 to Snapply once so that their account exists.
@@ -47,6 +48,18 @@ def main(argv: list[str]) -> int:
             by = totals.get(name, {})
             detail = ", ".join(f"{k} {v}" for k, v in sorted(by.items(), key=lambda kv: -kv[1])[:6])
             print(f"{name:22} {sum(by.values()):6}   {detail}")
+        return 0
+    if len(argv) >= 2 and argv[1] == "fills":
+        import analytics
+        days = int(argv[2]) if len(argv) > 2 else 7
+        rows = analytics.fill_summary(days)
+        def rate(r):
+            return r["filled"] / r["detected"] if r["detected"] else 0.0
+        print(f"Last {days} days: {sum(r['fills'] for r in rows.values())} fills on {len(rows)} sites (worst fill rate first)")
+        print(f"{'site':40} {'fills':>5} {'filled %':>8} {'req missing/fill':>16} {'CV attached':>11}  ats")
+        for host, r in sorted(rows.items(), key=lambda kv: (rate(kv[1]), -kv[1]["fills"])):
+            cv = f"{r['cv_attached']}/{r['cv_slots']}" if r["cv_slots"] else "-"
+            print(f"{host[:40]:40} {r['fills']:5} {rate(r) * 100:7.0f}% {r['required_missing'] / r['fills']:16.1f} {cv:>11}  {r.get('ats', '')}")
         return 0
     if len(argv) >= 2 and argv[1] == "reports":
         folder = accounts.data_root() / "reports"

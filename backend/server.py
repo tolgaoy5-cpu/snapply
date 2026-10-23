@@ -393,6 +393,22 @@ async def site_event(request:Request):
         raise HTTPException(status_code=422,detail='Invalid event')
     return {'ok':analytics.record(r.name,r.source)}
 
+class FillStats(BaseModel):
+    # Counts only: which site (host name) and how much of its form was filled. No values, labels or user id.
+    host:str=Field(min_length=1,max_length=200)
+    ats:str=Field(default='',max_length=40)
+    detected:int=Field(default=0,ge=0,le=10000)
+    filled:int=Field(default=0,ge=0,le=10000)
+    required_total:int=Field(default=0,ge=0,le=10000)
+    required_missing:int=Field(default=0,ge=0,le=10000)
+    cv_slots:int=Field(default=0,ge=0,le=100)
+    cv_attached:int=Field(default=0,ge=0,le=100)
+
+@app.post('/v1/fill-stats')
+def fill_stats(r:FillStats):
+    analytics.record_fill(r.host,r.ats,**r.model_dump(exclude={'host','ats'}))
+    return {'ok':True}
+
 class WaitlistRequest(BaseModel):
     email:str=Field(min_length=5,max_length=254,pattern=r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 

@@ -418,6 +418,8 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   await renderDocumentAsks();
   await renderCoverLetterAsk();
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
+  reportFillStats({deterministic,required,attached});
+  byId('reportAfterFill')&&(byId('reportAfterFill').hidden=false);
   // Bring what needs the user into view: their questions first, otherwise the review results.
   (answers.ask||answers.optional?byId('askTitle'):byId('askState').textContent?byId('askState'):byId('requiredState')).scrollIntoView({behavior:'smooth',block:'start'});
 }catch(e){show({error:e.message})}finally{send('FILL_FX',{on:false}).catch(()=>{})}};
@@ -879,6 +881,19 @@ async function learnFields(){
     if(Object.keys(hints).length)await send('FIELD_HINTS',{hints});
   }catch(_){/* the rules still fill what they recognise */}
 }
+// Anonymous fill quality per site: counts only (no values, labels, page path or user id), so sites
+// where Snapply fills poorly show up in `admin.py fills` and get fixed.
+async function reportFillStats({deterministic,required,attached}){try{
+  // The in-page panel knows its page from the frame's ancestor; the toolbar popup asks for the active tab.
+  const url=location.ancestorOrigins?.[0]||(await active())?.url||'';if(!/^https?:/.test(url))return;
+  const res=deterministic?.results||[],cv=attached?.names?.length||0;
+  await window.JobCopilotAPI.post('/v1/fill-stats',{host:new URL(url).hostname,ats:String(required?.ats||'').slice(0,40),
+    detected:res.length,filled:res.filter(x=>x.filled).length,required_total:required?.required_total||0,
+    required_missing:required?.missing_count||0,cv_slots:cv+(attached?.problems?.length||0),cv_attached:cv});
+}catch(_){/* stats are best effort */}}
+byId('reportAfterFill')&&(byId('reportAfterFill').onclick=()=>{
+  const box=byId('reportBox');box.hidden=false;box.scrollIntoView({behavior:'smooth',block:'center'});byId('reportNote').focus();
+});
 // "This page didn't fill correctly": send the form's structure (no values) so it can be fixed.
 byId('reportPage')&&(byId('reportPage').onclick=()=>{
   const box=byId('reportBox');box.hidden=!box.hidden;
