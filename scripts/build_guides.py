@@ -7,7 +7,7 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent / 'site'
 BASE = 'https://snapply.co.uk'
-UPDATED = '21 October 2026'
+UPDATED = '23 October 2026'
 
 GUIDES = [
     ('nhs-supporting-statement', 'How to write an NHS supporting statement',
@@ -111,6 +111,194 @@ GUIDES = [
 <li>Keep a note of which employers you have accounts with and the email you used.</li>
 </ul>
 """),
+    ('notice-period-question', 'How to answer “What is your notice period?”',
+     'What to write when a UK application asks for your notice period, with examples for every situation.',
+     """
+<p>Almost every UK application form asks for your notice period. Employers use it to plan a start date — it is not a test, so a short, accurate answer is best.</p>
+<h2>Find your real notice period</h2>
+<p>Check your employment contract or offer letter. If your contract says nothing, the legal minimum you must give after one month in a job is one week, but most contracts set a longer period — commonly one month, and often three months for senior roles.</p>
+<h2>Example answers</h2>
+<ul>
+<li><b>Employed:</b> “One month.” or “Three months, though I can ask about an earlier release.”</li>
+<li><b>On probation:</b> “One week (I am in my probation period).”</li>
+<li><b>Not working:</b> “Available immediately.”</li>
+<li><b>Contract or temporary role:</b> “My contract ends on 30 November, so I can start from 1 December.”</li>
+<li><b>Student or graduate:</b> “Available from July after I finish my degree.”</li>
+</ul>
+<h2>Tips</h2>
+<ul>
+<li>Do not shorten it to look keen. Employers expect to wait, and a start date you cannot keep causes problems later.</li>
+<li>If you have holiday left, you may be able to use it to leave earlier — only mention this if you have checked.</li>
+<li>Give the same answer on every application, so your applications stay consistent.</li>
+</ul>
+"""),
+    ('salary-expectations-question', 'How to answer salary expectations on an application',
+     'Answer the salary expectations question on UK job applications with a researched, realistic range.',
+     """
+<p>Many UK forms ask “What are your salary expectations?” and some make the box required. A researched answer protects you from underselling yourself without pricing you out.</p>
+<h2>1. Start from the advert</h2>
+<p>If the advert gives a salary or a band — common in the NHS (Agenda for Change bands), the Civil Service and the public sector — your answer is usually simply that figure or band. For example: “In line with the advertised salary of £32,000.”</p>
+<h2>2. Research the market</h2>
+<p>For adverts without a salary, look at similar roles in the same city and industry on job boards and in salary surveys. London roles typically pay more than the same role elsewhere in the UK.</p>
+<h2>3. Give a range, not a single number</h2>
+<p>A short range — for example “£35,000–£38,000 depending on the full package” — leaves room to negotiate and shows you understand that benefits matter too.</p>
+<h2>4. If the box only accepts a number</h2>
+<p>Enter the figure you would genuinely accept, usually towards the middle of your range, and raise the full package at offer stage.</p>
+<h2>Avoid</h2>
+<ul>
+<li>Writing “negotiable” in a required number box — it may be rejected or look evasive.</li>
+<li>Quoting your current salary when the question asks for expectations.</li>
+<li>Changing your answer from one application to the next for the same kind of role.</li>
+</ul>
+"""),
+    ('civil-service-applications', 'Civil Service applications: Success Profiles, behaviours and statements',
+     'How Civil Service job applications work: Success Profiles, behaviour examples, personal statements and sifting.',
+     """
+<p>Civil Service roles are advertised on Civil Service Jobs and assessed with the <b>Success Profiles</b> framework. Knowing how it works makes applications far less daunting.</p>
+<h2>What Success Profiles assess</h2>
+<p>Each advert lists which elements it will assess. The five elements are <b>Behaviours</b>, <b>Strengths</b>, <b>Ability</b>, <b>Experience</b> and <b>Technical</b>. At application stage you are usually asked for some of these:</p>
+<ul>
+<li><b>Behaviour examples</b> — for example “Delivering at Pace” or “Working Together”. Each has its own box, often with a word limit (250 words is common).</li>
+<li><b>A personal statement</b> — a longer piece showing how you meet the essential criteria in the advert. Check the word limit in the advert.</li>
+<li><b>A CV</b> — often a short employment history with key achievements.</li>
+</ul>
+<h2>Writing behaviour examples</h2>
+<p>Use one real example per behaviour and structure it with <a href="star-method-competency-questions">STAR</a> (Situation, Task, Action, Result). Spend most of the words on what <b>you</b> did, use “I” rather than “we”, and end with a measurable result.</p>
+<h2>Tips</h2>
+<ul>
+<li>Read the behaviour descriptions for the grade you are applying for — they differ by level.</li>
+<li>Many Civil Service roles are sifted without names, so let the evidence speak for itself.</li>
+<li>If there is a lead behaviour, it may be used for an initial sift, so make that example your strongest.</li>
+<li>Write in a document first; long forms can time out.</li>
+</ul>
+"""),
+    ('why-do-you-want-this-job', 'How to answer “Why do you want to work here?”',
+     'Answer motivation questions on UK applications with specific, honest reasons that match the role.',
+     """
+<p>“Why do you want this role?” and “Why do you want to work for us?” appear on most applications. Shortlisters look for answers that could only be written about <b>this</b> job.</p>
+<h2>A three-part answer</h2>
+<ol>
+<li><b>The role:</b> one or two parts of the job description that genuinely interest you, and why.</li>
+<li><b>Your fit:</b> the experience or skills you would bring to those parts, with a brief example.</li>
+<li><b>The organisation:</b> something specific — their services, a recent project, their values or the people they serve.</li>
+</ol>
+<h2>Example</h2>
+<p>“I want to move into management accounting, and this role’s focus on monthly reporting and forecasting matches the work I enjoy most. In my current role I prepare the monthly variance analysis for our property portfolio. Northbridge Homes’ plan to build 500 affordable homes in east London is also something I would be proud to support.”</p>
+<h2>Avoid</h2>
+<ul>
+<li>Generic praise (“a market leader with a great culture”) that fits any employer.</li>
+<li>Talking only about what you will gain — show what you bring too.</li>
+<li>Copying the same paragraph into every application without changing the details.</li>
+</ul>
+"""),
+    ('reason-for-leaving', 'How to answer “Reason for leaving” on an application form',
+     'Short, honest and professional ways to explain why you are leaving or left a job on UK application forms.',
+     """
+<p>Employment history sections often ask for a reason for leaving each job. Keep it short, true and neutral — a few words is usually enough.</p>
+<h2>Common reasons and how to word them</h2>
+<ul>
+<li><b>Career progression:</b> “Seeking a role with more responsibility.”</li>
+<li><b>End of contract:</b> “Fixed-term contract ended.”</li>
+<li><b>Redundancy:</b> “Role made redundant.” Redundancy is about the role, not you, so there is no need to explain further.</li>
+<li><b>Relocation:</b> “Moved to London.”</li>
+<li><b>Study or caring:</b> “Left to complete an MSc.” or “Left to care for a family member.”</li>
+<li><b>Still employed:</b> “Currently employed.” or “Seeking a new challenge.”</li>
+</ul>
+<h2>Tips</h2>
+<ul>
+<li>Do not criticise a previous employer or manager, even if the reason was difficult.</li>
+<li>If you were dismissed, be honest but brief, and be ready to explain what you learned at interview.</li>
+<li>Make sure your reasons and dates match your CV — inconsistencies are noticed.</li>
+</ul>
+"""),
+    ('employment-gaps', 'How to explain gaps in your employment history',
+     'Explain career breaks and gaps on UK applications and CVs honestly, briefly and with confidence.',
+     """
+<p>Gaps are common — study, caring, health, travel, redundancy or a difficult job market. Employers mostly want an accurate history, not a perfect one.</p>
+<h2>How to explain a gap</h2>
+<ul>
+<li><b>Name it briefly:</b> “Career break to care for a family member (2023–2024).”</li>
+<li><b>Add anything useful you did:</b> courses, volunteering, freelance work or a qualification.</li>
+<li><b>Show you are ready now:</b> “Now looking to return to full-time finance work.”</li>
+</ul>
+<h2>On application forms</h2>
+<p>Some forms — especially in the NHS, education, social care and other safer-recruitment roles — ask you to explain every gap, sometimes of more than a few weeks. Fill in each one: an unexplained gap can hold up your application or be queried at interview.</p>
+<h2>Health-related gaps</h2>
+<p>You do not have to give medical details on an application. A neutral phrase such as “career break for personal reasons” is fine; you can decide later whether to discuss adjustments with the employer.</p>
+<h2>Keep it consistent</h2>
+<p>Use the same dates (month and year) on your CV, the application form and LinkedIn.</p>
+"""),
+    ('job-references-uk', 'References on UK job applications: who to give and how',
+     'Choose referees for UK job applications, ask their permission and fill in reference sections correctly.',
+     """
+<p>Most UK application forms ask for one or two referees. Employers often contact them after making an offer, though some (for example in the NHS or schools) may contact them earlier.</p>
+<h2>Who to choose</h2>
+<ul>
+<li><b>Your current or most recent line manager</b> — usually required as the first referee.</li>
+<li><b>A previous manager</b> — some forms ask for referees covering a set number of years.</li>
+<li><b>Students and graduates:</b> a tutor, placement supervisor or part-time job manager.</li>
+<li>Avoid friends and family unless a <b>character reference</b> is specifically requested.</li>
+</ul>
+<h2>Before you add someone</h2>
+<ul>
+<li>Ask their permission and confirm their current job title, work email and phone number.</li>
+<li>Tell them which roles you are applying for, so they are not surprised by a request.</li>
+<li>Many forms ask whether a referee may be contacted before interview — say no if you do not want your current employer to know yet.</li>
+</ul>
+<h2>What a reference usually contains</h2>
+<p>Many UK employers give a factual reference — your job title and dates of employment — and some add information about absence or performance. A reference must be accurate and fair.</p>
+"""),
+    ('equality-monitoring-forms', 'Equality monitoring questions on job applications',
+     'What the equality and diversity questions on UK application forms are for, and your choices when answering them.',
+     """
+<p>Many UK applications include an equality and diversity section asking about things like age, sex, ethnicity, disability, religion and sexual orientation — characteristics protected under the Equality Act 2010.</p>
+<h2>Why employers ask</h2>
+<p>Employers use the anonymous totals to check whether their recruitment is fair — for example, whether people from some groups drop out at a particular stage. This section is usually kept separate from your application and not seen by the people shortlisting.</p>
+<h2>Your choices</h2>
+<ul>
+<li>These questions are normally voluntary, and most include a <b>“Prefer not to say”</b> option.</li>
+<li>Answering, or not answering, should not affect your application.</li>
+<li>Read the form’s privacy notice if you want to know exactly how the data is stored and used.</li>
+</ul>
+<h2>Disability and the Guaranteed Interview Scheme</h2>
+<p>Some employers, including many in the public sector, offer an interview to disabled applicants who meet the essential criteria (often called the Disability Confident or Guaranteed Interview Scheme). This question is separate from equality monitoring — read it carefully if it applies to you. You can also ask for reasonable adjustments for interviews or tests.</p>
+<p class="fine">Snapply never fills equality, disability or other personal questions for you — you always answer those yourself.</p>
+"""),
+    ('graduate-job-applications', 'Graduate job applications in the UK: a practical guide',
+     'How UK graduate schemes and entry-level applications work: timelines, online tests, forms and interviews.',
+     """
+<p>Graduate schemes in the UK usually open in the autumn of your final year and many recruit on a rolling basis — applying early can matter.</p>
+<h2>The typical process</h2>
+<ol>
+<li><b>Online application</b> — personal details, education, work experience and a few motivation or competency questions.</li>
+<li><b>Online tests</b> — numerical, verbal or situational judgement tests, sometimes straight after applying.</li>
+<li><b>Video or phone interview</b> — often pre-recorded.</li>
+<li><b>Assessment centre</b> — group exercises, a presentation and interviews, often online.</li>
+</ol>
+<h2>Tips for the application form</h2>
+<ul>
+<li>Use part-time jobs, volunteering, societies and projects as evidence — they count.</li>
+<li>Answer competency questions with <a href="star-method-competency-questions">STAR</a>.</li>
+<li>Make each “Why this firm?” answer specific (see <a href="why-do-you-want-this-job">our guide</a>).</li>
+<li>Keep a spreadsheet of deadlines, logins and stages — you may apply to dozens of schemes.</li>
+<li>Check if a scheme asks about visa sponsorship before applying, if it applies to you.</li>
+</ul>
+"""),
+    ('apply-for-jobs-faster', 'How to apply for more jobs in less time',
+     'A practical system for UK job seekers: reusable answers, tailored CVs and fewer repeated forms.',
+     """
+<p>Applying for jobs in the UK often means typing the same details into dozens of different forms. A simple system saves hours each week without making your applications generic.</p>
+<h2>1. Keep a master document</h2>
+<p>Store everything forms ask for in one place: dates of each job, employer addresses, qualifications with grades and dates, referees, your notice period and salary expectations. Copying from one source also keeps your applications consistent.</p>
+<h2>2. Write reusable answers — then tailor them</h2>
+<p>Draft your best examples once: a STAR example for each common competency, a short “about me”, and answers to eligibility questions. For each application, adapt the first and last sentences to the advert rather than starting from a blank page.</p>
+<h2>3. Tailor the parts that matter</h2>
+<p>Spend your time on what shortlisters read closely: the supporting statement or cover letter, and the top of your CV. Match them to the advert’s essential criteria.</p>
+<h2>4. Track everything</h2>
+<p>Keep a list of each application: employer, role, date, login email, closing date and status. It makes follow-ups and interview preparation much easier.</p>
+<h2>5. Automate the repetitive part</h2>
+<p>Tools such as Snapply fill the repeated fields — personal details, work history, saved answers and your CV upload — from your own CV, so you spend your time on the questions that need real thought. Always review the form before you submit.</p>
+"""),
 ]
 
 CTA = """<div class="cta-card"><b>Fill applications from your CV in one click</b>
@@ -154,7 +342,7 @@ def main():
         (out / f'{slug}.html').write_text(page(title, desc, content, f'guides/{slug}'))
     items = '\n'.join(f'<li><a href="/guides/{s}"><b>{html.escape(t)}</b></a><br><span class="fine">{html.escape(d)}</span></li>' for s, t, d, _ in GUIDES)
     index = f'<h1>Job application guides</h1>\n<p class="intro">Practical, honest advice for UK job applications.</p>\n<ul class="guide-list">\n{items}\n</ul>\n{CTA}'
-    (out / 'index.html').write_text(page('Job application guides', 'Practical advice for UK job applications: NHS supporting statements, cover letters, competency questions, right to work and Workday.', index, 'guides/'))
+    (out / 'index.html').write_text(page('Job application guides', 'Practical advice for UK job applications: NHS and Civil Service applications, cover letters, competency questions, notice period, salary, references and more.', index, 'guides/'))
     urls = ['', 'guides/', *[f'guides/{s}' for s, *_ in GUIDES], 'privacy', 'terms']
     (SITE / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                       + ''.join(f'  <url><loc>{BASE}/{u}</loc></url>\n' for u in urls) + '</urlset>\n')
