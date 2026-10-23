@@ -14,6 +14,7 @@ to Snapply once so that their account exists.
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 import accounts
@@ -38,6 +39,9 @@ def _find(email: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    # Writing as root (plain `fly ssh console`) leaves files the server cannot read; refuse to change data then.
+    if len(argv) >= 2 and argv[1] in ("grant-pro", "revoke-pro") and hasattr(os, "geteuid") and os.geteuid() == 0:
+        sys.exit("Run as the server user: su snapply -s /bin/sh -c 'cd /app && python admin.py ...' (scripts/grant_pro.sh does this).")
     if len(argv) >= 2 and argv[1] == "stats":
         import analytics
         days = int(argv[2]) if len(argv) > 2 else 30

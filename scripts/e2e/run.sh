@@ -2,7 +2,7 @@
 # Weekly live check of the real extension on random UK job application pages (see live.mjs).
 # Uses a temporary data directory and a made-up CV on a local test server (port 8797), never the
 # user's ~/.job-copilot data. Reports go to ~/.snapply-e2e/reports (outside the repository).
-#   ./scripts/e2e/run.sh [count]          random adverts (default 30)
+#   ./scripts/e2e/run.sh [count]          about [count] real postings across ATS platforms (default 30)
 #   ./scripts/e2e/run.sh --urls file.txt  a fixed list of application pages
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -22,8 +22,10 @@ for i in $(seq 1 40); do curl -sf "http://127.0.0.1:$PORT/health" >/dev/null && 
 curl -sf -F "file=@$DATA/Sam-Taylor-CV.pdf;type=application/pdf" "http://127.0.0.1:$PORT/v1/profile/import" >/dev/null \
   || { echo "Test CV import failed"; exit 1; }
 
-ARGS=(--count "${1:-30}")
-[ "${1:-}" = "--urls" ] && ARGS=(--urls "$2")
+# Default: real UK postings from the ATS platforms' public job-board APIs. The government Find a Job
+# site now refuses automated requests (403, since 23 Oct 2026), so it is no longer the source.
+if [ "${1:-}" = "--urls" ]; then ARGS=(--urls "$2")
+else "$PY" "$ROOT/scripts/e2e/ats_urls.py" $(( (${1:-30} + 4) / 5 )) > "$DATA/urls.txt"; ARGS=(--urls "$DATA/urls.txt"); fi
 node "$ROOT/scripts/e2e/live.mjs" --chrome "$CHROME" --ext "$ROOT/extension" --api "http://127.0.0.1:$PORT" --out "$E2E/reports" "${ARGS[@]}"
 # What the server received from the extension's anonymous fill counts (same numbers real users send).
 (cd "$ROOT/backend" && JOB_COPILOT_DATA_DIR="$DATA" "$PY" admin.py fills 1)

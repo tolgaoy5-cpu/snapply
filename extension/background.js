@@ -7,6 +7,8 @@ chrome.runtime.onInstalled.addListener(({reason})=>{
 // application form embedded in an iframe. Session storage, because the worker may be stopped.
 const framesKey=id=>'frames:'+id;
 chrome.runtime.onMessage.addListener((m,sender,send)=>{
+  // The in-page panel (an extension frame inside the page) asks which tab it sits in.
+  if(m.type==='SNAPPLY_MY_TAB'){send(sender.tab||null);return}
   if(m.type==='SNAPPLY_FORM_FRAME'&&sender.tab){
     const id=sender.tab.id,fid=sender.frameId||0;
     chrome.storage.session.get(framesKey(id)).then(async r=>{

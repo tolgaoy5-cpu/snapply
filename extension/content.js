@@ -1,6 +1,6 @@
 const FIELD_RULES=[
  {key:'application_source',re:/how did you hear about us|application source|source of application|where (?:did )?you (?:hear|heard|see|saw|find|found)\b|where .*heard about/i},{key:'first_name',re:/^known as\b|preferred (?:first )?name/i},{key:'first_name',re:/first\s*name|forename|given\s*name/i},{key:'last_name',re:/last\s*name|surname|family\s*name/i},
- {key:'full_name',re:/^(?:full|legal|your)\s*(?:full\s*)?name\b|^name\s*[✱*]?$/i},{key:'linkedin',re:/linked\s*in/i},{key:'github',re:/git\s*hub/i},{key:'website',re:/portfolio|personal\s*(?:web)?site|^(?:other\s+)?website|blog\b/i},{key:'location',re:/^(?!.*\b(?:city|town)\b)(?:.*current\s+location|location\b)|where\s+are\s+you\s+(?:currently\s+)?(?:based|located)|city\s*,\s*country/i},{key:'email',re:/e-?mail/i},{key:'phone_country_code',re:/country\s+phone\s+code/i},{key:'country',re:/^country(?:\s*code)?$/i},{key:'phone_device_type',re:/phone\s+device\s+type/i},{key:'phone_extension',re:/phone\s+extension/i},{key:'phone',re:/^(?!.*extension)(?!.*device).*?(?:phone\s*number|mobile(?:\s*number)?|telephone(?:\s*number)?|phone)$/i},{key:'resume',re:/resume|cv|curriculum vitae/i},{key:'title',re:/^title(?:\s*\*)?|honou?rific|salutation/i},{key:'address',re:/address\s*(line)?\s*1|street\s*address/i},{key:'address_line2',re:/address\s*(line)?\s*2/i},{key:'address_line3',re:/address\s*(line)?\s*3/i},
+ {key:'full_name',re:/^(?:full|legal|your)\s*(?:full\s*)?name\b|^name\s*[✱*]?$/i},{key:'linkedin',re:/linked\s*in/i},{key:'github',re:/git\s*hub/i},{key:'website',re:/portfolio|personal\s*(?:web)?site|^(?:other\s+)?website|blog\b/i},{key:'location',re:/^(?!.*\b(?:city|town)\b)(?:.*current\s+location|location\b)|where\s+are\s+you\s+(?:currently\s+)?(?:based|located)|city\s*,\s*country/i},{key:'email',re:/e-?mail/i},{key:'phone_country_code',re:/country\s+phone\s+code/i},{key:'country',re:/^country(?:\s*code)?$/i},{key:'phone_device_type',re:/phone\s+device\s+type/i},{key:'phone_extension',re:/phone\s+extension/i},{key:'phone',re:/^(?!.*extension)(?!.*device).*?(?:phone\s*number|mobile(?:\s*number)?|telephone(?:\s*number)?|phone)$/i},{key:'resume',re:/resume|cv|curriculum vitae/i},{key:'title',re:/^title(?:\s*\*)?|honou?rific|salutation/i},{key:'address',re:/address\s*(line)?\s*1|street\s*address/i},{key:'address_line2',re:/address\s*(line)?\s*2/i},{key:'address_line3',re:/address\s*(line)?\s*3/i},{key:'address_full',re:/^(?:(?:home|postal|current|residential|full|your|permanent)\s+)?address(?:\s*\([^)]*\))?$/i},
  {key:'region',re:/^region\b|^county\b/i},{key:'city',re:/\bcity\b|\btown\b/i},{key:'postcode',re:/post\s*code|postal\s*code/i},{key:'right_to_work',re:/right\s+to\s+work|work\s+authori[sz]ation/i},
  {key:'sponsorship',re:/sponsor|sponsorship|visa sponsorship/i},{key:'notice_period',re:/notice\s+period|available\s+to\s+start|when\s+(?:can|could|would)\s+you\s+start|earliest\s+start|availability\s+to\s+start/i},{key:'salary_expectation',re:/salary|compensation|pay expectation/i},
  {key:'supporting_statement',re:/supporting\s+statement|personal\s+statement|why.*role|why.*apply|why.*work|why.*company|motivation|suitability|relevant experience/i},
@@ -27,7 +27,11 @@ function containerLabel(el){
   }
   return '';
 }
-function textFor(el){const direct=[];if(el.id){const l=document.querySelector(`label[for="${CSS.escape(el.id)}"]`);if(l)direct.push(l.innerText)}const wrapped=el.closest('label');if(wrapped)direct.push(wrapped.innerText);const lb=el.getAttribute('aria-labelledby');if(lb)lb.split(/\s+/).forEach(id=>{const t=document.getElementById(id);if(t&&t!==el)direct.push(t.innerText||t.textContent)});['aria-label','placeholder'].forEach(x=>{if(el.getAttribute(x))direct.push(el.getAttribute(x))});const clean=[...new Set(direct.map(x=>String(x||'').replace(/\s+/g,' ').trim()).filter(Boolean))];if(clean.length)return clean.join(' ');const cap=containerLabel(el);if(cap&&el.type!=='radio'&&el.type!=='checkbox')return cap;const seen=el.type!=='radio'&&el.type!=='checkbox'&&window.snapplyVisualLabel?.(el);if(seen)return seen;const fallback=[];['name','id'].forEach(x=>{if(el.getAttribute(x))fallback.push(el.getAttribute(x))});const g=el.closest('fieldset,.form-group,.field,.question,.control-group,[class*=employment],[class*=education]');if(g){const l=g.querySelector(':scope > legend,:scope > .label,:scope > .question-text,:scope > h3,:scope > h4');if(l)fallback.push(l.innerText)}return [...new Set(fallback)].join(' ').replace(/\s+/g,' ').trim()}
+// Hint text such as "Type here..." or "hello@example.com" is not part of a field's label when a real label exists.
+const GENERIC_PLACEHOLDER=/^(?:type|enter|start typing|select|choose|search|please|e\.?g\.?|example|your answer)\b|(?:\.\.\.|…)$|@|^https?:/i;
+function textFor(el){const direct=[];if(el.id){const l=document.querySelector(`label[for="${CSS.escape(el.id)}"]`);if(l)direct.push(l.innerText)}const wrapped=el.closest('label');if(wrapped)direct.push(wrapped.innerText);const lb=el.getAttribute('aria-labelledby');if(lb)lb.split(/\s+/).forEach(id=>{const t=document.getElementById(id);if(t&&t!==el)direct.push(t.innerText||t.textContent)});['aria-label','placeholder'].forEach(x=>{const v=el.getAttribute(x);if(!v)return;if(x==='placeholder'&&direct.length&&GENERIC_PLACEHOLDER.test(v.trim()))return;direct.push(v)});const clean=[...new Set(direct.map(x=>String(x||'').replace(/\s+/g,' ').trim()).filter(Boolean))];if(clean.length)return clean.join(' ');const cap=containerLabel(el);if(cap&&el.type!=='radio'&&el.type!=='checkbox')return cap;const seen=el.type!=='radio'&&el.type!=='checkbox'&&window.snapplyVisualLabel?.(el);if(seen)return seen;const fallback=[];['name','id'].forEach(x=>{if(el.getAttribute(x))fallback.push(el.getAttribute(x))});const g=el.closest('fieldset,.form-group,.field,.question,.control-group,[class*=employment],[class*=education]');if(g){const l=g.querySelector(':scope > legend,:scope > .label,:scope > .question-text,:scope > h3,:scope > h4');if(l)fallback.push(l.innerText)}return [...new Set(fallback)].join(' ').replace(/\s+/g,' ').trim()}
+// Same job page whatever the site adds to the address (?gh_src=…, #app, a trailing slash).
+function snapplySamePage(a,b){try{const x=new URL(a),y=new URL(b);return x.origin===y.origin&&x.pathname.replace(/\/+$/,'')===y.pathname.replace(/\/+$/,'')}catch(_){return a===b}}
 function canonical(label,el=null){
   const wd=window.JobCopilotWorkday?.canonicalFrom?.(el); if(wd) return wd;
   const text=String(label||'').replace(/\s+/g,' ').replace(/\s*\(required\)\s*$/i,'').replace(/\s*[✱*]+\s*$/,'').replace(/^\s*[✱*]+\s*/,'').replace(/\s*\([^)]{20,}\)?\s*/g,' ').trim().split(' ').map(t=>/[._]|^[A-Z][a-z]+[A-Z]/.test(t)?t.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[._\[\]]+/g,' ').trim():t).join(' ');
@@ -35,6 +39,9 @@ function canonical(label,el=null){
   const name=String(el?.getAttribute?.('name')||'').trim().toLowerCase();
   const ac=String(el?.getAttribute?.('autocomplete')||'').trim().toLowerCase();
   const idn=id.replace(/-/g,'_'),namen=name.replace(/-/g,'_');
+  // Ashby's built-in fields keep stable names whatever the employer calls them ("Preferred Full Name").
+  const ASHBY={_systemfield_name:'full_name',_systemfield_email:'email',_systemfield_phone:'phone',_systemfield_location:'location'};
+  if(ASHBY[namen])return ASHBY[namen];
   if(['first_name','firstname','given_name'].includes(idn)||['first_name','firstname','given_name'].includes(namen)) return 'first_name';
   if(['last_name','lastname','surname','family_name'].includes(idn)||['last_name','lastname','surname','family_name'].includes(namen)) return 'last_name';
 
@@ -120,7 +127,7 @@ function phoneForField(key,label,value){
   if(key!=='phone'||!value||!/\+\s?44/.test(label)||!/represents? the (?:first |leading )?0|without (?:the )?(?:first |leading )?0|(?:omit|drop|remove|leave out) the (?:first |leading )?0|no leading 0/i.test(label))return value;
   return String(value).trim().replace(/^\+44\s?(?:\(0\)\s?)?|^0/,'');
 }
-function flatProfile(p){const loc=p.location||[p.city,p.country].filter(Boolean).join(', ');return {full_name:p.full_name||[p.first_name,p.last_name].filter(Boolean).join(' '),location:loc,linkedin:p.linkedin,github:p.github,website:p.website,application_source:p.application_source,first_name:p.first_name,last_name:p.last_name,email:p.email,country:p.country,phone_country_code:p.phone_country_code||p.country,phone:p.phone,phone_device_type:p.phone_device_type,phone_extension:p.phone_extension,address:p.address||p.address_line1,address_line2:p.address_line2,address_line3:p.address_line3,city:p.city,region:p.region||p.city,postcode:p.postcode,title:p.title,recent_nhs_experience:p.recent_nhs_experience,right_to_work:p.right_to_work,sponsorship:p.sponsorship,notice_period:p.notice_period,salary_expectation:p.salary_expectation}}
+function flatProfile(p){const loc=p.location||[p.city,p.country].filter(Boolean).join(', ');return {full_name:p.full_name||[p.first_name,p.last_name].filter(Boolean).join(' '),location:loc,linkedin:p.linkedin,github:p.github,website:p.website,application_source:p.application_source,first_name:p.first_name,last_name:p.last_name,email:p.email,country:p.country,phone_country_code:p.phone_country_code||p.country,phone:p.phone,phone_device_type:p.phone_device_type,phone_extension:p.phone_extension,address:p.address||p.address_line1,address_full:[p.address||p.address_line1,p.address_line2,p.city,p.postcode].filter(Boolean).join(', '),address_line2:p.address_line2,address_line3:p.address_line3,city:p.city,region:p.region||p.city,postcode:p.postcode,title:p.title,recent_nhs_experience:p.recent_nhs_experience,right_to_work:p.right_to_work,sponsorship:p.sponsorship,notice_period:p.notice_period,salary_expectation:p.salary_expectation}}
 function confidenceFor(key,value,el){if(key==='unknown'||value===undefined||value===null||value==='')return 'ASK_USER';if(key==='country'&&el?.tagName==='INPUT'&&el.tagName!=='SELECT')return 'MEDIUM';if(['supporting_statement','salary_expectation','notice_period','resume','title','application_source','phone_device_type'].includes(key))return 'MEDIUM';return 'HIGH'}
 function currentField(original){
  if(original.isConnected!==false)return original;
@@ -149,7 +156,8 @@ function fill(profile){
    const live=currentField(el);
    // A React rerender may replace controls after each change. Never fill a
    // detached element or a replacement with a different semantic label.
-   if(confidence==='HIGH'&&live&&canonical(textFor(live),live)===key&&!((live.type==='radio'||live.type==='checkbox')?live.checked:live.value))filled=choose(live,value);
+   // Upload boxes are handled by the attach step; one field that refuses a value must not stop the rest.
+   if(confidence==='HIGH'&&live&&live.type!=='file'&&canonical(textFor(live),live)===key&&!((live.type==='radio'||live.type==='checkbox')?live.checked:live.value)){try{filled=choose(live,value)}catch(_){filled=false}}
    out.push({label,key,questionType,decision,confidence,filled,group:groupInfo(live||el)});
  }
  return out;
@@ -516,7 +524,9 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(named.length===1)return named;
     // A page with a single upload control that asks for a CV ("Upload your CV", "Browse") is the CV slot.
     const files=[...document.querySelectorAll('input[type="file"]')];
-    if(files.length===1&&!/cover|certificate|transcript|portfolio|photo/i.test(textFor(files[0]))&&/\b(cv|resume|résumé|curriculum vitae)\b/i.test(document.body.innerText||''))return files;
+    // Its id, name and heading count too: on Greenhouse, once the CV is attached only the "Attach" button of
+    // the cover letter (id="cover_letter") is left, and it must not become the CV slot.
+    if(files.length===1&&!/cover|certificate|transcript|portfolio|photo/i.test(`${textFor(files[0])} ${files[0].id} ${files[0].name} ${window.SnapplyDocuments?.slotText?.(files[0])||''}`)&&/\b(cv|resume|résumé|curriculum vitae)\b/i.test(document.body.innerText||''))return files;
     // Workday's visible Resume/Cover Letter drop zone uses one display:none
     // file input as its actual React change target. Require that exact structure
     // and a unique file input before assigning a user-requested saved CV.
@@ -617,7 +627,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
   }
   async function attachCoverLetter(payload){
     // In a form frame the panel has already checked the tab's address; the frame's own address differs.
-    if(window===window.top&&location.href!==payload?.expected_url)return {ok:false,reason:'Job page changed since the cover letter was generated.'};
+    if(window===window.top&&!snapplySamePage(location.href,payload?.expected_url))return {ok:false,reason:'Job page changed since the cover letter was generated.'};
     if(!payload?.base64||!payload?.name||!/^Cover-Letter-[a-zA-Z0-9-]+\.(pdf|docx)$/.test(payload.name))
       return {ok:false,reason:'Validated cover letter document is missing.'};
     const field=uploadField();if(!field.ok)return field;
@@ -647,7 +657,7 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
   }
   chrome.runtime.onMessage.addListener((m,_s,send)=>{
     if(m.type==='COVER_LETTER_UPLOAD_FORMATS'){
-      if(window===window.top&&location.href!==m.expected_url){send({ok:false,reason:'Job page changed since the cover letter was generated.'});return true}
+      if(window===window.top&&!snapplySamePage(location.href,m.expected_url)){send({ok:false,reason:'Job page changed since the cover letter was generated.'});return true}
       const field=uploadField();
       send(field.ok?{ok:!!field.allowed.length,formats:field.allowed,reason:field.allowed.length?null:'This upload field does not accept PDF or DOCX.'}:{ok:false,reason:field.reason});
       return true;
@@ -694,7 +704,13 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
     return [el.id,el.name,el.getAttribute('data-ui')||'',String(el.className||''),String(group?.className||''),GENERIC.test(lt)?'':lt,lb,headingFor(el)].join(' ');
   }
   // The CV slot is whatever the CV attach step would use, so the panel and the attach agree.
-  function categoryOf(el){try{if((window.snapplyResumeInputs?.()||[]).includes(el))return 'cv'}catch(_){}const t=slotText(el);return (CATEGORIES.find(([,re])=>re.test(t))||[null])[0]}
+  function categoryOf(el){try{if((window.snapplyResumeInputs?.()||[]).includes(el))return 'cv'}catch(_){}
+    // The field's own id/name and the group that labels it ("upload-label-cover_letter") beat nearby headings,
+    // which can belong to the previous field ("Resume/CV" above Greenhouse's cover letter).
+    const group=el.closest('[role="group"][aria-labelledby]');
+    const own=`${el.id} ${el.name} ${group?document.getElementById(group.getAttribute('aria-labelledby'))?.textContent||'':''}`;
+    const hit=CATEGORIES.find(([,re])=>re.test(own));if(hit)return hit[0];
+    const t=slotText(el);return (CATEGORIES.find(([,re])=>re.test(t))||[null])[0]}
   function decode(base64){const raw=atob(String(base64||''));const b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);return b}
   function accepts(el,file){
     const accept=String(el.getAttribute('accept')||'').trim();if(!accept)return true;

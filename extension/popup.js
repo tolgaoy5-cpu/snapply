@@ -5,7 +5,11 @@ if(new URLSearchParams(location.search).has('embedded')){
   document.body.style.width='auto';
   document.querySelectorAll('header h1,header .version').forEach(n=>n.style.display='none');
 }
-async function active(){const [t]=await chrome.tabs.query({active:true,currentWindow:true});return t}
+// Inside the in-page panel the tab is the one holding the panel (the "active tab of the current window"
+// can be another window's tab, or none); the toolbar popup uses the active tab.
+async function active(){
+  if(new URLSearchParams(location.search).has('embedded')){try{const t=await chrome.runtime.sendMessage({type:'SNAPPLY_MY_TAB'});if(t?.id!=null)return t}catch(_){}}
+  const [t]=await chrome.tabs.query({active:true,currentWindow:true});return t}
 // Talk to the frame that holds the application form: usually the page itself, sometimes an iframe.
 const TOP_ONLY=new Set(['EXTRACT_JOB','EXTRACT_POSTING']);
 async function formFrame(tabId,type){
@@ -401,6 +405,9 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   const deterministic=await send('FILL_FORM',{profile:p});
   const attached=await attachEverything();
   const memory=await window.JobCopilotMemory.getAll();
+  // Country pickers (e.g. Greenhouse's phone country) use the CV's country when no answer is saved;
+  // a UK mobile number means United Kingdom.
+  if(!memory.country?.value){const c=p.country||(/^(?:\+44|0044|07)/.test(String(p.phone||'').replace(/\s/g,''))?'United Kingdom':'');if(c)memory.country={value:c,source:'profile'}}
   const options=await send('FILL_CONFIRMED_OPTIONS',{memory});
   let answers=await answerQuestions();
   let required=await send('REQUIRED_FIELD_STATUS',{profile:p});
@@ -679,9 +686,11 @@ async function renderCoverLetterAsk(){
   byId('cards').prepend(card);
 }
 
+// Same job page whatever the site adds to the address (?gh_src=…, #app, a trailing slash).
+function samePage(a,b){try{const x=new URL(a),y=new URL(b);return x.origin===y.origin&&x.pathname.replace(/\/+$/,'')===y.pathname.replace(/\/+$/,'')}catch(_){return a===b}}
 async function attachReviewedCoverLetter(draft){
   const activePage=await active();
-  if(activePage.url!==draft?.job?.url)throw new Error('The active job page changed. Generate a letter for this page.');
+  if(!samePage(activePage.url,draft?.job?.url)){show({coverLetterPageCheck:{page:activePage.url,letter:draft?.job?.url}});throw new Error('The active job page changed. Generate a letter for this page.')}
   const body=byId('coverLetterBody').value.trim();
   if(!body)throw new Error('Review the cover letter body before attaching.');
   const field=await send('COVER_LETTER_UPLOAD_FORMATS',{expected_url:draft.job.url});
@@ -747,7 +756,7 @@ byId('attachCoverLetter').onclick=async()=>{try{
   const pageUrl=(await active()).url;
   // A generated draft for another job is never attached here (the page changed). With no draft for
   // this page, the text in the box is the user's own letter for this job.
-  const ownLetter=body&&(!coverLetterDraft||(coverLetterDraft.job?.url!==pageUrl&&body!==String(coverLetterDraft.body||'').trim()));
+  const ownLetter=body&&(!coverLetterDraft||(!samePage(coverLetterDraft.job?.url,pageUrl)&&body!==String(coverLetterDraft.body||'').trim()));
   if(ownLetter){
     byId('coverLetterState').textContent='Checking your letter against your CV…';
     const {job}=await resolveCurrentJob();
@@ -760,7 +769,7 @@ byId('attachCoverLetter').onclick=async()=>{try{
 
 (async()=>{
   const {coverLetterDraft}=await chrome.storage.local.get('coverLetterDraft');
-  if(coverLetterDraft?.job?.url===(await active()).url){
+  if(samePage(coverLetterDraft?.job?.url,(await active()).url)){
     byId('coverLetterBody').value=coverLetterDraft.body||'';
     byId('coverLetterState').textContent='Draft restored for this job. Review before attaching.';
   }

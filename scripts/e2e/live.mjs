@@ -151,6 +151,11 @@ async function checkSite(cdp, url) {
       }
       res.summary = last;
       res.coverCard = await evaluate(cdp, panel, `/Cover letter/.test(document.getElementById('cards')?.innerText||'')`).catch(() => false);
+      // SNAPPLY_SHOTS=<dir>: save what the page and panel actually look like (text checks miss a blank-looking panel).
+      if (process.env.SNAPPLY_SHOTS) {
+        const shot = await cdp.send('Page.captureScreenshot', {format: 'png'}, page).catch(() => null);
+        if (shot?.data) fs.writeFileSync(path.join(process.env.SNAPPLY_SHOTS, res.host.replace(/[^a-z0-9.]/gi, '_') + '.png'), Buffer.from(shot.data, 'base64'));
+      }
     }
     // Collect every form frame's fields after the fill.
     res.frames = await stats();
@@ -162,7 +167,7 @@ async function checkSite(cdp, url) {
   res.fields = all.length;
   res.filled = all.filter(f => f.filled).length;
   res.login = all.some(f => f.kind === 'password') || LOGIN_HOSTS.test(res.final || url);
-  res.missedBasics = all.filter(f => f.kind === 'text' && !f.filled && BASIC.test(f.label) && !SECONDARY.test(f.label)).map(f => f.label);
+  res.missedBasics = all.filter(f => f.kind === 'text' && !f.filled && f.label.length <= 60 && BASIC.test(f.label) && !SECONDARY.test(f.label))  // long labels are questions ("Have you added your full legal name…?").map(f => f.label);
   const files = all.filter(f => f.kind === 'file');
   res.cvSlot = files.some(f => /cv|resume|résumé|curriculum/i.test(f.label)) || files.length === 1;
   res.cvAttached = files.some(f => f.filled) || (res.frames || []).some(f => f.cvShown);

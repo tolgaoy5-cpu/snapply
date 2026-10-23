@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(process.argv[2] || path.join(__dirname,'..','extension/popup.js'),'utf8');
-const section = source.slice(source.indexOf('async function attachReviewedCoverLetter'), source.indexOf('\n(async()=>{', source.indexOf('async function attachReviewedCoverLetter')));
+const section = source.slice(source.indexOf('function samePage'), source.indexOf('\n(async()=>{', source.indexOf('async function attachReviewedCoverLetter')));
 async function setup(draftOverrides={}) {
   const elements = {}, calls = [], storage = {};
   const job = {url:'https://example.org/job/1',requirement_count:1};
@@ -37,6 +37,10 @@ async function setup(draftOverrides={}) {
   await h.byId('generateCoverLetter').onclick();
   assert.equal(h.byId('coverLetterBody').value,'');
   assert.equal(h.calls.filter(x=>x.type==='ATTACH_COVER_LETTER').length,0);
+  // The same page with tracking added to its address (Greenhouse ?gh_src=…, #app) still attaches.
+  h=await setup(); await h.byId('generateCoverLetter').onclick();h.setURL('https://example.org/job/1?gh_src=abc#app');
+  h.byId('coverLetterBody').value='Reviewed';await h.byId('attachCoverLetter').onclick();
+  assert.equal(h.calls.filter(x=>x.type==='ATTACH_COVER_LETTER').length,1,'Tracking parameters are the same page');
   h=await setup(); await h.byId('generateCoverLetter').onclick();h.setURL('https://example.org/job/2');
   await h.byId('attachCoverLetter').onclick();
   assert.match(h.byId('coverLetterState').textContent,/active job page changed/);

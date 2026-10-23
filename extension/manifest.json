@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Snapply",
-  "version": "0.35.8",
+  "version": "0.36.0",
   "description": "Fills job applications from your CV, remembers your answers and drafts grounded AI answers — you review and submit.",
   "permissions": [
     "activeTab",

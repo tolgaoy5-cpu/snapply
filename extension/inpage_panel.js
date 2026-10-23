@@ -129,6 +129,9 @@
   tab.addEventListener('click',open);
 
   (document.body||document.documentElement).append(host);
+  // React sites (e.g. some Greenhouse job boards) re-render the whole page after load and drop the
+  // panel with it; put it back for the first minute.
+  let checks=0;const keep=setInterval(()=>{if(!host.isConnected)(document.body||document.documentElement).append(host);if(++checks>=60)clearInterval(keep)},1000);
   if(store.get()||collapsed)tab.classList.add('show');else open();
 
   chrome.runtime.onMessage.addListener((m,_s,send)=>{

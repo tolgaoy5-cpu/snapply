@@ -1,0 +1,11 @@
+<!-- Greenhouse after the CV is attached: the resume input is gone (file name shown instead); only the
+     cover letter's hidden input, labelled just "Attach", is left on a page that still mentions the CV. -->
+<form id="gh">
+  <div><div class="label">Resume/CV</div><span>Sam-Taylor-CV.pdf</span></div>
+  <div class="field-wrapper"><div role="group" aria-labelledby="upload-label-cover_letter" class="file-upload">
+    <div id="upload-label-cover_letter" class="label upload-label">Cover Letter</div>
+    <button type="button">Attach</button><label class="visually-hidden" for="cover_letter">Attach</label>
+    <input id="cover_letter" class="visually-hidden" type="file" accept=".pdf,.doc,.docx,.txt,.rtf">
+  </div></div>
+  <div><label for="fn">First Name</label><input id="fn" type="text"></div>
+</form>
