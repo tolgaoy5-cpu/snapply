@@ -2,7 +2,11 @@
   const rowId=(i,key)=>`EditAppFieldset.education.gmrow_${i}.${key}`;
   const find=(i,key)=>document.getElementById(rowId(i,key));
   const onTrac=()=>/(^|\.)trac\.jobs$/i.test(location.hostname)&&/^\/application\//.test(location.pathname);
-  const isEducation=()=>onTrac()&&!!document.getElementById('EditAppFieldset')&&!!find(0,'Subject')&&!!find(0,'Place');
+  // Two TRAC layouts: flat rows (gmrow_N.Subject/Place) and, at some trusts, a place of study per row
+  // (grrow_N.place) with its own subject rows (grrow_N.details.gmrow_M.subject/grade/date).
+  const gid=(i,key)=>`EditAppFieldset.education.grrow_${i}.${key}`;
+  const grouped=()=>!!document.getElementById(gid(0,'place'));
+  const isEducation=()=>onTrac()&&!!document.getElementById('EditAppFieldset')&&((!!find(0,'Subject')&&!!find(0,'Place'))||grouped());
   const clean=x=>String(x||'').trim();
   function yearFromDates(dates){
     const parts=clean(dates).match(/\b(?:19|20)\d{2}\b/g)||[];
@@ -33,9 +37,40 @@
     el.blur();
     return {filled:clean(el.value)===wanted,reason:clean(el.value)===wanted?'Value set':'Could not verify value'};
   }
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  async function clickAndWait(button,grew){if(!button)return false;button.click();for(let n=0;n<20;n++){await wait(100);if(grew())return true}return false}
+  const placeRows=()=>[...document.querySelectorAll('[id^="EditAppFieldset.education.grrow_"][id$=".place"]')]
+    .map(x=>Number(x.id.match(/\.grrow_(\d+)\.place$/)?.[1])).filter(Number.isInteger).sort((a,b)=>a-b);
+  const subjectRows=i=>[...document.querySelectorAll(`[id^="EditAppFieldset.education.grrow_${i}.details.gmrow_"][id$=".subject"]`)]
+    .map(x=>Number(x.id.match(/\.gmrow_(\d+)\.subject$/)?.[1])).filter(Number.isInteger).sort((a,b)=>a-b);
+  async function fillGroupedEducation(p){
+    // One place-of-study row per institution, its degrees as subject rows under it.
+    const byPlace=[];for(const r of p.records){let g=byPlace.find(x=>x.place===r.place);if(!g)byPlace.push(g={place:r.place,items:[]});g.items.push(r)}
+    const groups=byPlace.slice(0,11),out=[];
+    for(let n=0;n<groups.length;n++){
+      let rows=placeRows();
+      if(rows.length<=n){const last=rows[rows.length-1];if(!await clickAndWait(document.getElementById(gid(last,'GRAddAfter')),()=>placeRows().length>rows.length))break;rows=placeRows()}
+      const i=rows[n],g=groups[n];
+      const current=clean(document.getElementById(gid(i,'place'))?.value);
+      if(current&&current!==g.place){out.push({row:i,fields:{place:{filled:false,reason:'Row already holds a different place of study'}}});continue}
+      const status={place:fillField(document.getElementById(gid(i,'place')),g.place)};
+      for(let m=0;m<g.items.length;m++){
+        let subs=subjectRows(i);
+        if(subs.length<=m&&!await clickAndWait(document.getElementById(gid(i,'details.AddButton')),()=>subjectRows(i).length>subs.length))break;
+        const j=subjectRows(i)[m],r=g.items[m],sub=key=>document.getElementById(gid(i,`details.gmrow_${j}.${key}`));
+        status[`subject ${m+1}`]=fillField(sub('subject'),r.subject);
+        if(r.grade)status[`grade ${m+1}`]=fillField(sub('grade'),r.grade);
+        if(r.year)status[`date ${m+1}`]=fillField(sub('date'),r.year);
+      }
+      out.push({row:i,fields:status});
+    }
+    return {ok:true,section:'education',rows:out,existing_rows:placeRows(),remaining_records:Math.max(0,byPlace.length-groups.length),
+      note:'Review the rows in TRAC. Rows were added with TRAC\'s own buttons where needed; Save, Submit and navigation were not clicked.'};
+  }
   async function fillEducation(profile){
     const p=plan(profile);if(!p.ok)return p;
     if(!p.records.length)return {...p,ok:false,reason:'No verified education with both degree and institution in Master Profile.'};
+    if(grouped())return fillGroupedEducation(p);
     if(p.records.length>20)return {...p,ok:false,reason:'More than 20 education records; review the profile first.'};
     for(let n=0;n<Math.min(p.existing_rows.length,p.records.length);n++){
       const i=p.existing_rows[n],r=p.records[n];
