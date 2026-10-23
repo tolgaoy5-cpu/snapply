@@ -128,14 +128,17 @@
     try{document.body.click()}catch(_){} return false;
   }
   function degreeAliases(v){
-    // Live Workday capture (Live Nation wd503) exposes concrete degree options such as
-    // "Master of Science (M.S.)" and "Bachelor of Science (B.S.)". Put exact
-    // Workday labels first; broader aliases remain as fallbacks for other tenants.
+    // Workday tenants use either concrete labels ("Bachelor of Science (B.S.)", Live Nation) or level labels
+    // ("Bachelor's Degree", "A-Levels (or equivalent)", AIG). Exact labels first, broader ones as fallbacks.
     const s=norm(v);
-    if(/msc|master of science|master/.test(s))return ["Master of Science (M.S.)","Master of Arts (M.A.)","Master of Business Administration (MBA)","master"];
-    if(/bsc|bachelor of science|bachelor/.test(s))return ["Bachelor of Science (B.S.)","Bachelor of Arts (B.A.)","Bachelor of Engineering (BEng)","bachelor"];
-    if(/\bba\b/.test(s))return ["Bachelor of Arts (B.A.)","Bachelor of Business Administration (BBA)","bachelor"];
-    if(/phd|doctor/.test(s))return ["Doctor of Philosophy (PhD)",'doctorate','doctoral degree','phd'];
+    if(/phd|doctor/.test(s))return ["Doctor of Philosophy (PhD)","Doctor of Philosophy (Ph.D.)",'doctorate','doctoral degree','phd'];
+    if(/\bmba\b|business administration \(m/.test(s))return ["Master of Business Administration (MBA)","Master of Business Administration (M.B.A.)","Master's Degree",'master'];
+    if(/msc|\bma\b|\bmres\b|\bmeng\b|master/.test(s))return ["Master of Science (M.S.)","Master of Arts (M.A.)","Master's Degree",'master'];
+    if(/bsc|beng|bachelor/.test(s))return ["Bachelor of Science (B.S.)","Bachelor of Arts (B.A.)","Bachelor of Engineering (BEng)","Bachelor's Degree",'bachelor'];
+    if(/\bba\b|\bllb\b/.test(s))return ["Bachelor of Arts (B.A.)","Bachelor of Business Administration (BBA)","Bachelor's Degree",'bachelor'];
+    if(/a[ -]?levels?|\bbtec\b/.test(s))return ["A-Levels (or equivalent)","A-Levels",'a level'];
+    if(/gcse|o[ -]?levels?/.test(s))return ["GCSE/O-Levels (or equivalent)","GCSE",'gcse'];
+    if(/\bnvq\b|diploma|certificate|chartered|acca|cima|cipd/.test(s))return ["Professional Qualification"];
     return [];
   }
   function findControl(root,patterns){
@@ -206,7 +209,8 @@
       const b=addButton(kind); if(!b)return{ok:false,reason:`Could not find ${kind} Add/Add Another button.`,count:before};
       b.click(); loops++;
       let advanced=false;
-      for(let i=0;i<20;i++){
+      // Workday can take a few seconds to draw a new row (seen live on AIG's education section).
+      for(let i=0;i<60;i++){
         await sleep(100);
         if(rowContainers(kind).length>before){advanced=true;break}
       }
@@ -388,13 +392,7 @@
     }catch(_){return false}
   }
   function fieldStudyAliases(value){
-    // Source-first rule: always try the exact CV field first. Only if Workday does not
-    // offer that exact taxonomy label, fall back to the broader Psychology category.
-    // This fallback is deliberately narrow and only applies to psychology-related fields.
-    const s=norm(value);
-    if(!s)return [];
-    if(s==='psychology')return [];
-    if(/psycholog|counsell|counsel/.test(s))return ['Psychology'];
+    // Only the exact CV field is chosen; a different subject would misstate the degree.
     return [];
   }
   function promptFieldContainer(el){
@@ -733,7 +731,7 @@
     const field=findByIdContains(root,'--fieldOfStudy')||findControl(root,[/field of study/,/area of study/,/major/,/subject/])||nearbyPromptControl(root,/field of study|area of study|major|subject/);
     if(school&&rec.institution&&nativeSet(school,rec.institution))report.filled.push('institution'); else if(rec.institution)report.missing.push('institution');
     if(degree&&rec.degree){const ok=degree.tagName==='BUTTON'?await chooseDegree(degree,rec.degree):await chooseSearchInput(degree,rec.degree,degreeAliases(rec.degree));if(ok)report.filled.push('degree'); else report.missing.push('degree')}
-    if(field&&rec.field){const ok=await chooseSearchInput(field,rec.field,fieldStudyAliases(rec.field));if(ok)report.filled.push('field'); else report.missing.push(`field (exact CV value and Psychology fallback not offered/committed: ${rec.field})`)}
+    if(field&&rec.field){const ok=await chooseSearchInput(field,rec.field,fieldStudyAliases(rec.field));if(ok)report.filled.push('field'); else report.missing.push(`field (no exact option for: ${rec.field})`)}
     return report;
   }
   function valuePresent(el){if(!el)return false;if(el.type==='checkbox'||el.type==='radio')return el.checked;const v=String(el.value||'').trim();if(v&&!/^select one$/i.test(v))return true;return !!window.JobCopilotWorkday?.multiselectSelection?.(el).length}

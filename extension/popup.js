@@ -380,13 +380,15 @@ async function fillWorkdayExperiencePage(p){
   const experience=await send('WORKDAY_BULK_EXPERIENCE_FILL',{profile:p});
   const dates=experience.ok||experience.employment?.length?await repairDatesInActiveTab():{ok:false,reason:'Skipped: rows were not filled.'};
   const languages=await send('WORKDAY_LANGUAGE_FILL',{profile:p});
+  // My Experience also holds Workday's Resume/CV upload.
+  const attached=await attachEverything().catch(()=>({names:[],problems:[],note:''}));
   const required=await send('REQUIRED_FIELD_STATUS',{profile:p});
   const rowMisses=experience.required_missing||[];
   const parts=[`${experience.added_employment||0} experience`,`${experience.added_education||0} education`];
   if(languages.ok)parts.push(`${languages.rows?.length||0} languages`);
   byId('summary').textContent=experience.ok===false&&!experience.employment?.length
     ?`Your input is needed · ${experience.reason||experience.error||'Experience fill stopped'}`
-    :`Filled ${parts.join(' · ')} · ${dateSummary(dates)} · confirm with Save and Continue`;
+    :`Filled ${parts.join(' · ')} · ${dateSummary(dates)}${attached.note||''} · confirm with Save and Continue`;
   const missing=required.missing_count+rowMisses.length;
   byId('requiredState').textContent=missing?`${missing} required fields still need attention.`:'All detected required fields are complete.';
   cards([...rowMisses.map(x=>({status:'ASK_USER',label:x,reason:'Required row field is still empty.'})),...required.items.filter(x=>x.status!=='COMPLETE')]);
@@ -410,6 +412,8 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   // Country pickers (e.g. Greenhouse's phone country) use the CV's country when no answer is saved;
   // a UK mobile number means United Kingdom.
   if(!memory.country?.value){const c=p.country||(/^(?:\+44|0044|07)/.test(String(p.phone||'').replace(/\s/g,''))?'United Kingdom':'');if(c)memory.country={value:c,source:'profile'}}
+  // Workday's required "Phone Device Type": a UK mobile number (07…, +447…) is a Mobile.
+  if(!memory.phone_device_type?.value&&/^(?:\+44|0044|0)7/.test(String(p.phone||'').replace(/\s/g,'')))memory.phone_device_type={value:'Mobile',source:'profile'};
   const options=await send('FILL_CONFIRMED_OPTIONS',{memory});
   let answers=await answerQuestions();
   let required=await send('REQUIRED_FIELD_STATUS',{profile:p});
@@ -419,7 +423,10 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   if(unseen(required)){await new Promise(res=>setTimeout(res,400));answers=await answerQuestions();required=await send('REQUIRED_FIELD_STATUS',{profile:p})}
   byId('requiredState').textContent=required.missing_count?`${required.missing_count} required fields still need attention.`:'All detected required fields are complete.';
   const filledNow=(deterministic?.results||[]).filter(x=>x.filled).length;
-  byId('summary').textContent=!section&&!answers.ask&&!answers.filled&&!filledNow&&!required.missing_count
+  // Nothing found at all: usually the page (Workday and other single-page sites) has not finished drawing the form.
+  const nothingFound=!section&&!(deterministic?.results||[]).length&&!required.required_total&&!answers.ask&&!answers.filled&&!answers.optional&&!attached.names?.length;
+  byId('summary').textContent=nothingFound?'No form fields found yet. Wait for the page to finish loading, then press Fill this page again.'
+    :!section&&!answers.ask&&!answers.filled&&!filledNow&&!required.missing_count
     ?`Required questions are complete${answers.optional?` · ${answers.optional} optional below`:''} (${required.filled_required}/${required.required_total} answered).`
     :`${sectionNote}Filled · ${required.filled_required}/${required.required_total} required complete${attached.note}${answers.filled?` · ${answers.filled} from saved answers`:''}${answers.ask?` · ${answers.ask} need your answer`:''}`;
   // Questions listed under "Your input is needed" are not repeated as generic cards.
