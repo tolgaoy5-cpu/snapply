@@ -420,6 +420,7 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
   reportFillStats({deterministic,required,attached});
   byId('reportAfterFill')&&(byId('reportAfterFill').hidden=false);
+  maybeAskForReview((deterministic?.results||[]).filter(x=>x.filled).length);
   // Bring what needs the user into view: their questions first, otherwise the review results.
   (answers.ask||answers.optional?byId('askTitle'):byId('askState').textContent?byId('askState'):byId('requiredState')).scrollIntoView({behavior:'smooth',block:'start'});
 }catch(e){show({error:e.message})}finally{send('FILL_FX',{on:false}).catch(()=>{})}};
@@ -891,6 +892,22 @@ async function reportFillStats({deterministic,required,attached}){try{
     detected:res.length,filled:res.filter(x=>x.filled).length,required_total:required?.required_total||0,
     required_missing:required?.missing_count||0,cv_slots:cv+(attached?.problems?.length||0),cv_attached:cv});
 }catch(_){/* stats are best effort */}}
+// After a few fills that worked, ask once for a Web Store review ("Not now" asks again much later; never after a review).
+const REVIEW_URL='https://chromewebstore.google.com/detail/snapply/pbciplmicohoeflmnjapakibfgbmjcmb/reviews';
+async function maybeAskForReview(filled){try{
+  if(filled<3||!byId('reviewAsk'))return;
+  const r=(await chrome.storage.local.get('reviewAsk')).reviewAsk||{good:0,next:5};
+  r.good=(r.good||0)+1;await chrome.storage.local.set({reviewAsk:r});
+  byId('reviewAsk').hidden=!!r.done||r.good<r.next;
+}catch(_){}}
+async function answerReview(rated){
+  const r=(await chrome.storage.local.get('reviewAsk')).reviewAsk||{good:0,next:5};
+  await chrome.storage.local.set({reviewAsk:rated?{...r,done:true}:{...r,next:(r.good||0)+15}});
+  byId('reviewAsk').hidden=true;
+  if(rated)chrome.tabs.create({url:REVIEW_URL});
+}
+byId('reviewYes')&&(byId('reviewYes').onclick=()=>answerReview(true));
+byId('reviewLater')&&(byId('reviewLater').onclick=()=>answerReview(false));
 byId('reportAfterFill')&&(byId('reportAfterFill').onclick=()=>{
   const box=byId('reportBox');box.hidden=false;box.scrollIntoView({behavior:'smooth',block:'center'});byId('reportNote').focus();
 });
