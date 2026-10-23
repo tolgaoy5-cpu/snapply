@@ -304,7 +304,9 @@ function askCard(q){
   }catch(e){go.disabled=false;status.className='block';status.textContent=e.message}};
   // Written questions about the job (not personal data or declarations) can get an AI draft
   // built only from CV evidence that matches the job's requirements. The user edits it before filling.
-  const draftable=q.kind==='text'&&(q.sensitivity==='normal'||q.sensitivity==='review')&&aiReady;
+  // AI drafts are for written answers, not facts only the user knows (dates, numbers, ids).
+  const factual=/\bdate\b|start(?:ing)? date|available from|when can you start|\bnumber\b|\b(?:ni|ni number|postcode|phone|email)\b|how many|years? of|\bsalary\b|\bgrade\b|\bband\b/i.test(q.label||'');
+  const draftable=q.kind==='text'&&!factual&&(q.sensitivity==='normal'||q.sensitivity==='review')&&aiReady;
   const draft=draftable?el('button',{textContent:'Draft with AI'}):null;
   if(draft)draft.onclick=async()=>{try{
     draft.disabled=true;status.className='muted';status.textContent='Drafting from your CV and the job requirements…';

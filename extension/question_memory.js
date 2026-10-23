@@ -59,6 +59,9 @@
     };
     const exact=list.find(x=>x.signature===sig&&fits(x));
     if(exact)return {item:exact,score:1};
+    // Yes/no-style questions flip meaning with one word ("Are you an employee of the Trust?" vs "Are you related to
+    // an employee of the Trust?"), so a saved answer is reused only for exactly the same question.
+    if(question.kind==='choice'&&Array.isArray(question.options)&&question.options.length<=3)return null;
     let best=null;
     for(const item of list){
       if(!fits(item))continue;

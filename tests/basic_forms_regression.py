@@ -29,7 +29,7 @@ const call=(type,extra)=>new Promise(res=>{{let d=false;for(const l of window.__
   const v=id=>document.getElementById(id).value;
   document.getElementById('out').textContent=JSON.stringify({{cv:cv.ok,cvFiles:document.getElementById('bubble-cv').files.length,
     questions:q.questions.map(x=>x.label),slots,score:window.snapplyFormScore(),
-    values:Object.fromEntries(['first-name','last-name','bubble-phone','Email','CandidatePhone_FormattedNumber','HomePhone','Postcode','s2id_autogen2','FullName','Mob','Addr'].map(id=>[id,v(id)]))}});
+    values:Object.fromEntries(['first-name','last-name','bubble-phone','Email','CandidatePhone_FormattedNumber','HomePhone','Postcode','s2id_autogen2','FullName','Mob','Addr','EditAppFieldset.employment-empaddress1','EditAppFieldset.employment-emptelephonenumber'].map(id=>[id,v(id)]))}});
 }})();
 </script></body></html>'''
 def run(page):
@@ -48,7 +48,9 @@ expected = {'first-name': 'Sam', 'last-name': 'Taylor', 'bubble-phone': '07700 9
             'CandidatePhone_FormattedNumber': '07700 900123', 'Postcode': 'E5 9PB', 'HomePhone': '', 's2id_autogen2': '',
             'FullName': 'Sam Taylor', 'Mob': '7700 900123',
             # A single "Address" box (TLT and many small employers) takes the whole address.
-            'Addr': '12 Example Road, London, E5 9PB'}
+            'Addr': '12 Example Road, London, E5 9PB',
+            # Employer contact fields stay empty: they are about the organisation, not the applicant.
+            'EditAppFieldset.employment-empaddress1': '', 'EditAppFieldset.employment-emptelephonenumber': ''}
 for k, want in expected.items():
     assert v[k] == want, (k, v[k], want, r)
 assert r['cv'] is True and r['cvFiles'] == 1, r
@@ -62,7 +64,7 @@ print('basic forms ok')
 
 # Hidden file inputs behind titled drop zones: CV goes to the CV area, never the cover letter one.
 page = page_for('upload_slots.html').replace("v(id)]))}});", "v(id)]))}});").replace(
-    "['first-name','last-name','bubble-phone','Email','CandidatePhone_FormattedNumber','HomePhone','Postcode','s2id_autogen2','FullName','Mob','Addr']", "['fn']").replace(
+    "['first-name','last-name','bubble-phone','Email','CandidatePhone_FormattedNumber','HomePhone','Postcode','s2id_autogen2','FullName','Mob','Addr','EditAppFieldset.employment-empaddress1','EditAppFieldset.employment-emptelephonenumber']", "['fn']").replace(
     "document.getElementById('bubble-cv').files.length", "[document.getElementById('u1').files.length,document.getElementById('u2').files.length]")
 r = run(page)
 assert r['slots'] == ['cv', 'cover_letter'], r['slots']
@@ -71,7 +73,7 @@ print('upload slots ok')
 
 # Greenhouse after the CV is attached: the lone cover letter input must stay a cover letter slot, not the CV.
 page = page_for('cover_only.html').replace(
-    "['first-name','last-name','bubble-phone','Email','CandidatePhone_FormattedNumber','HomePhone','Postcode','s2id_autogen2','FullName','Mob','Addr']", "['fn']").replace(
+    "['first-name','last-name','bubble-phone','Email','CandidatePhone_FormattedNumber','HomePhone','Postcode','s2id_autogen2','FullName','Mob','Addr','EditAppFieldset.employment-empaddress1','EditAppFieldset.employment-emptelephonenumber']", "['fn']").replace(
     "document.getElementById('bubble-cv').files.length", "document.getElementById('cover_letter').files.length")
 r = run(page)
 assert r['slots'] == ['cover_letter'], r['slots']

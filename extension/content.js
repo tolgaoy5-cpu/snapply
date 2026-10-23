@@ -139,6 +139,13 @@ function currentField(original){
  }
  return null;
 }
+// Contact fields about an employer, college or school ("Employer or college address 1", TRAC's
+// "employment-emptelephonenumber") belong to that organisation, never to the applicant.
+const CONTACT_KEYS=new Set(['address','address_full','address_line2','address_line3','city','region','postcode','phone','phone_secondary','email','country','location']);
+function ABOUT_SOMEONE_ELSE(label,el,key){
+  if(!CONTACT_KEYS.has(key))return false;
+  return /\b(employer|employer's|college|company|organi[sz]ation|school|university|business|practice|agency|manager's|supervisor)\b/i.test(label)||/(^|[._-])emp(address|town|county|country|postcode|telephone|phone)|employer/i.test(`${el.id||''} ${el.name||''}`);
+}
 function fill(profile){
  const simple=flatProfile(profile),els=semanticElements(),out=[];
  const decisions=new Map(reviewPlan(profile).map(item=>[item.index,item.decision]));
@@ -147,7 +154,7 @@ function fill(profile){
    const label=textFor(el),key=canonical(label,el),value=phoneForField(key,label,simple[key]),questionType=classifyQuestion(label);
    // Never put the applicant's own details into rows about other people or other jobs
    // (TRAC referee/employer/education rows: "Referee's first name", "City / Town", "Telephone").
-   if(/\.(gmrow|grrow)_\d+\./.test(el.id||'')||/referee|reference|next of kin|emergency contact/i.test(label)){out.push({label,key,questionType,decision:'SKIP',confidence:'SKIP',filled:false,reason:'Third-party or history row'});continue}
+   if(/\.(gmrow|grrow)_\d+\./.test(el.id||'')||/referee|reference|next of kin|emergency contact/i.test(label)||ABOUT_SOMEONE_ELSE(label,el,key)){out.push({label,key,questionType,decision:'SKIP',confidence:'SKIP',filled:false,reason:'Third-party or history row'});continue}
    // Review Plan is the policy source for both the UI and the actual fill action.
    // Confidence alone cannot override its sensitive, eligibility or option reviews.
    const decision=decisions.get(index)||'REVIEW';
@@ -339,6 +346,8 @@ chrome.runtime.onMessage.addListener((m,_s,send)=>{
 // V0.20: required-field completeness + guided resolution.
 // This is ATS-agnostic and never submits the application.
 function isRequiredElement(el){
+  // Passwords (e.g. TRAC's "re-enter your password" lock) are the user's to type and are never application questions.
+  if(el.type==='password'||/password/i.test(`${el.name||''} ${el.id||''}`)) return false;
   if(el.required||el.getAttribute('aria-required')==='true') return true;
   const label=textFor(el);
   return /\*/.test(label) && !/optional/i.test(label);

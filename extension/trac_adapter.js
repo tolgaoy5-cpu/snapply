@@ -101,9 +101,14 @@
     return {ok:true,section:'education',rows:out,existing_rows:indices,remaining_records:Math.max(0,p.records.length-indices.length),
       note:'Review the rows in TRAC. Rows were added with TRAC\'s Add button where needed; Save, Submit and navigation were not clicked.'};
   }
-  const employerId=(i,key)=>`EditAppFieldset.otheremp.grrow_${i}.employment-${key}`;
+  // Field ids are "grrow_N.employment-empname" on most forms and "grrow_N.empname" at some trusts.
+  const empPrefix=()=>document.querySelector('[id^="EditAppFieldset.otheremp.grrow_"][id$=".employment-empname"]')?'employment-':'';
+  const employerId=(i,key)=>`EditAppFieldset.otheremp.grrow_${i}.${empPrefix()}${key}`;
   const employerField=(i,key)=>document.getElementById(employerId(i,key));
-  const isEmployer=()=>onTrac()&&!!document.getElementById('EditAppFieldset')&&!!employerField(0,'empname')&&!!employerField(0,'jobtitle');
+  // "Current job, course or other main activity": one fixed set of fields (EditAppFieldset.employment-*), no rows.
+  const currentField=key=>document.getElementById(`EditAppFieldset.employment-${key}`);
+  const isCurrentJob=()=>!!currentField('empname')&&!!currentField('jobtitle');
+  const isEmployer=()=>onTrac()&&!!document.getElementById('EditAppFieldset')&&((!!employerField(0,'empname')&&!!employerField(0,'jobtitle'))||isCurrentJob());
   const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
   function employmentDates(dates){
     const m=clean(dates).match(/^(\d{2})\/(\d{4})\s*[-–—]\s*(Present|Current|(\d{2})\/(\d{4}))$/i);
@@ -117,8 +122,8 @@
     })).filter(x=>x.employer&&x.role);
   }
   function employerRows(){
-    return [...document.querySelectorAll('[id^="EditAppFieldset.otheremp.grrow_"][id$=".employment-empname"]')]
-      .map(x=>Number(x.id.match(/\.grrow_(\d+)\.employment-empname$/)?.[1]))
+    return [...document.querySelectorAll(`[id^="EditAppFieldset.otheremp.grrow_"][id$=".${empPrefix()}empname"]`)]
+      .map(x=>Number(x.id.match(/\.grrow_(\d+)\./)?.[1]))
       .filter(Number.isInteger).sort((a,b)=>a-b);
   }
   function employerPlan(profile){
@@ -159,9 +164,26 @@
     }
     return false;
   }
+  function fillCurrentJob(p){
+    // The most recent CV job; its end date stays empty when it is the current one.
+    const r=p.records[0],d=r.dates,date=key=>document.getElementById(`EditAppFieldset.employment-${key}`);
+    const activity=currentField('currentactivity');
+    const kind=activity&&[...activity.options].find(o=>/^employed\b/i.test(clean(o.textContent)));
+    const fields={...(kind?{activity:fillSelect(activity,clean(kind.textContent))}:{}),
+      employer:fillField(currentField('empname'),r.employer),role:fillField(currentField('jobtitle'),r.role),
+      duties:fillDuties(currentField('dutiesdesc'),r.duties),
+      start_month:fillSelect(date('startdate.month'),d.start_month),start_year:fillSelect(date('startdate.year'),d.start_year)};
+    return {ok:true,section:'employment',rows:[{row:0,fields}],remaining_records:0,
+      note:'Your most recent job from the CV. Review it; address, salary and grade stay for you. No Save or Submit was clicked.'};
+  }
   async function fillEmployer(profile){
     const p=employerPlan(profile);if(!p.ok)return p;
     if(!p.records.length)return {...p,ok:false,reason:'No confirmed employer records in Master Profile.'};
+    if(isCurrentJob()&&!employerField(0,'empname'))return fillCurrentJob(p);
+    // "Activities prior to above": the current job has its own section, so start from the job before it.
+    if(/prior to (?:the )?above/i.test(document.querySelector('#EditAppFieldset')?.closest('form,.card,body')?.innerText||'')&&p.records[0]?.dates?.current)
+      p.records=p.records.slice(1);
+    if(!p.records.length)return {...p,ok:false,reason:'Only your current job is in the CV; it belongs in the Current job section.'};
     if(p.records.length>20)return {...p,ok:false,reason:'More than 20 employer records; review before filling.'};
     // Never overwrite another employment record that is already on the form.
     for(let n=0;n<Math.min(p.existing_rows.length,p.records.length);n++){
@@ -180,7 +202,11 @@
     const rows=[];
     for(let n=0;n<p.records.length;n++){
       const i=employerRows()[n],r=p.records[n],d=r.dates;
-      const fields={employer:fillField(employerField(i,'empname'),r.employer),
+      // "Type of activity" (some trusts): a CV job is employment.
+      const activity=employerField(i,'currentactivity');
+      const kind=activity&&[...activity.options].find(o=>/^employed\b/i.test(clean(o.textContent)));
+      const fields={...(kind?{activity:fillSelect(activity,clean(kind.textContent))}:{}),
+        employer:fillField(employerField(i,'empname'),r.employer),
         role:fillField(employerField(i,'jobtitle'),r.role),
         duties:fillDuties(employerField(i,'dutiesdesc'),r.duties),
         start_month:fillSelect(document.getElementById(`${employerId(i,'startdate')}.month`),d.start_month),

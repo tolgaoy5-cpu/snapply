@@ -46,6 +46,11 @@ assert.strictEqual(Q.findMatch(saved,{label:'Are you a qualified nurse?',kind:'c
 // Choice answers only reuse when this page offers the same option; kinds must agree.
 assert.strictEqual(Q.findMatch(saved,{label:'Are you a qualified teacher?',kind:'choice',options:['Yes','No']}).item.value,'No');
 assert.strictEqual(Q.findMatch(saved,{label:'Are you a qualified teacher?',kind:'choice',options:['QTS','Not yet']}),null);
+// Seen on TRAC: a yes/no answer saved for one question must not answer a similar-looking one.
+{const emp=[{signature:Q.signature('Are you currently an employee of Central and North West London NHS Foundation Trust?'),
+  question:'Are you currently an employee of Central and North West London NHS Foundation Trust?',value:'Yes',kind:'choice'}];
+ assert.strictEqual(Q.findMatch(emp,{label:"a) Are you related to a member or employee of Central and North West London NHS Foundation Trust?",kind:'choice',options:['Yes','No']}),null);
+ assert.strictEqual(Q.findMatch(emp,{label:'Are you currently an employee of Central and North West London NHS Foundation Trust?*',kind:'choice',options:['Yes','No']}).item.value,'Yes');}
 assert.strictEqual(Q.findMatch(saved,{label:'Are you a qualified teacher?',kind:'text'}),null);
 // Job-specific statements are proposed, never auto-filled (TRAC 'Supporting information', live 2026-10-13).
 for(const l of ['Supporting information','Please outline your reasons for applying and include personal qualities','If you have any gaps within your employment history, please state the reasons','Please outline the reason for any gaps in your employment over 1 day','Cover letter'])assert.strictEqual(Q.sensitivity(l),'review',l);
