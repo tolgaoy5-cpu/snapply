@@ -3,7 +3,8 @@ import json
 from fastapi import FastAPI, HTTPException, UploadFile, File, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, BeforeValidator
+from typing import Annotated
 from typing import Any
 from tempfile import NamedTemporaryFile
 from pathlib import Path
@@ -69,11 +70,20 @@ BROWSER_ONLY_SENSITIVITY={'legal','sensitive'}
 class JobCapture(BaseModel):
     title:str=''; company:str=''; url:str=''; text:str=''
 
+# Some sites set huge maxlength values (Workable: 200,000); anything above 20,000 means no real limit.
+def _sane_limit(v):
+    try:
+        v=int(v)
+    except (TypeError,ValueError):
+        return None
+    return v if 20<=v<=20000 else (20 if 0<v<20 else None)
+CharLimit=Annotated[int|None,BeforeValidator(_sane_limit)]
+
 class AnswerRequest(BaseModel):
     question:str
     profile:dict[str,Any]
     job:dict[str,Any]
-    character_limit:int|None=Field(default=None,ge=20,le=20000)
+    character_limit:CharLimit=None
 
 class AnswerBatchRequest(BaseModel):
     questions:list[dict[str,Any]]
@@ -167,7 +177,7 @@ def _generate_one(r:AnswerRequest)->dict[str,Any]:
 class RevalidateRequest(BaseModel):
     answer:str
     allowed_evidence:list[str]
-    character_limit:int|None=Field(default=None,ge=20,le=20000)
+    character_limit:CharLimit=None
 
 class ResolveProfileRequest(BaseModel):
     profile:dict[str,Any]

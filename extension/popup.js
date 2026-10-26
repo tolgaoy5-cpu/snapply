@@ -321,7 +321,7 @@ function askCard(q){
       try{const cur=await resolveCurrentJob();job=cur.job;if(job?.requirement_count&&!cur.capture.error)await chrome.storage.local.set({currentJob:job})}catch(_){}
     }
     if(!job?.requirements?.length)throw new Error('Open the job advert and press “Read job description” first, then come back to this page.');
-    const r=await window.JobCopilotAPI.post('/v1/answers/generate',{question:q.label,profile:await profile(),job,character_limit:q.max_length||null});
+    const r=await window.JobCopilotAPI.post('/v1/answers/generate',{question:q.label,profile:await profile(),job,character_limit:q.max_length>0&&q.max_length<=20000?q.max_length:null});
     if(r.status==='ASK_USER'||!r.answer)throw new Error('Your CV has no evidence that matches this question. Please write it yourself.');
     control.value=r.answer;remember.checked=false;if(r.letter){control.rows=16;control.style.minHeight='260px'}
     const claims=[...(r.validation?.unsupported_claims||[])];
@@ -522,7 +522,7 @@ byId('saveQueueEdit').onclick=async()=>{try{
     await window.JobCopilotQueue.update(q.cursor,{user_answer:answer,state:'USER_PROVIDED',insert_allowed:false});
     await renderQueue();queueMessage('Answer saved for this question. It has not been added to Application Memory.');return;
   }
-  const rv=await window.JobCopilotAPI.post('/v1/answers/revalidate',{answer,allowed_evidence:x.allowed_evidence||[],character_limit:x.character_limit||null});
+  const rv=await window.JobCopilotAPI.post('/v1/answers/revalidate',{answer,allowed_evidence:x.allowed_evidence||[],character_limit:x.character_limit>0&&x.character_limit<=20000?x.character_limit:null});
   await window.JobCopilotQueue.update(q.cursor,{user_answer:answer,state:rv.insert_allowed?'REVALIDATED':'REVIEW_REQUIRED',validation:rv.validation,insert_allowed:rv.insert_allowed});
   await renderQueue();queueMessage(rv.insert_allowed?'Answer validated. You can now insert it into the form.':'Your input is needed: this answer could not be validated.');
   show({saved:true,revalidated:true,insert_allowed:rv.insert_allowed,validation:rv.validation});
