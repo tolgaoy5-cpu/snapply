@@ -263,14 +263,14 @@ async function answerQuestions(){
     if(!match&&!q.required){
       if(q.sensitivity==='sensitive'||q.sensitivity==='legal')optionalPersonal++;
       // Optional lists: read options only where that does not open anything on the page.
-      if(q.kind==='choice'&&!q.options&&q.fillable&&q.control==='react_select')q.options=await questionOptions(q);
+      if(q.kind==='choice'&&!q.options&&q.fillable&&(q.control==='react_select'||q.control==='aria_combobox'))q.options=await questionOptions(q);
       if(q.kind==='choice'&&!q.options?.length&&q.control==='workday_listbox')q.fillable=false;
-      if(q.control==='react_select'&&!q.options?.length)q.fillable=false;
+      if((q.control==='react_select'||q.control==='aria_combobox')&&!q.options?.length)q.fillable=false;
       optional.push({...q,suggestion:q.cvSuggestion||''});continue;
     }
     if(q.kind==='choice'&&!q.options&&q.fillable){q.options=await questionOptions(q);match=window.JobCopilotQuestions.findMatch(saved,q)}
     // Lists whose options load only while typing (e.g. location search) are answered on the page.
-    if(q.control==='react_select'&&!q.options?.length)q.fillable=false;
+    if((q.control==='react_select'||q.control==='aria_combobox')&&!q.options?.length)q.fillable=false;
     if(match&&q.sensitivity==='normal'&&q.fillable){
       const f=await fillQuestion(q,match.item.value);
       if(f.ok){filled++;continue}

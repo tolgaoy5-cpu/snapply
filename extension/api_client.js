@@ -1,6 +1,17 @@
 // API client for the Snapply backend: the local one (127.0.0.1, no sign-in) or the hosted one
 // (Google sign-in, session token in chrome.storage.local).
 (function(){
+  // After Snapply is updated or reloaded, a panel still open on a page belongs to the old copy and every
+  // extension call fails. Say so once instead of logging errors.
+  const gone=()=>!globalThis.chrome?.runtime?.id;
+  const stale=e=>gone()||/Extension context invalidated/i.test(String(e?.message||e||''));
+  const staleNotice=()=>{const s=document.getElementById('summary');if(s)s.textContent='Snapply was updated — reload this page to keep using it.';
+    document.querySelectorAll('button').forEach(b=>b.disabled=true)};
+  if(!gone()&&typeof window.addEventListener==='function'&&typeof document!=='undefined'){
+    const watch=setInterval(()=>{if(gone()){clearInterval(watch);staleNotice()}},1500);
+    window.addEventListener('unhandledrejection',e=>{if(stale(e.reason)){e.preventDefault();staleNotice()}});
+    window.addEventListener('error',e=>{if(stale(e.error||e.message)){e.preventDefault();staleNotice()}});
+  }
   const LOCAL='http://127.0.0.1:8787';
   const CLOUD='https://snapply-api.fly.dev';
   async function base(){const x=await chrome.storage.local.get('apiBase');return x.apiBase||CLOUD}

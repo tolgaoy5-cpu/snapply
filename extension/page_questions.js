@@ -82,6 +82,16 @@ function containerLabelPQ(el){
     }else{
       for(const el of semanticElements()){
         if(el.type==='hidden'||el.type==='file'||el.type==='checkbox'||el.type==='password')continue;
+        // Inputs hidden from people (Workable keeps the chosen option's id in one) are not questions.
+        if(el.getAttribute('aria-hidden')==='true'&&el.tabIndex<0)continue;
+        // Read-only list boxes (Workable "Select an option…"): a choice from the list it opens.
+        if(el.matches('input[role="combobox"][aria-haspopup="listbox"]')&&el.readOnly&&el.id){
+          const own=ariaText(el)||label;
+          if(PROFILE_KEYS.has(canonical(own,el))&&!isQuestionSentence(own))continue;
+          const hidden=el.closest('[data-ui]')?.querySelector('input[aria-hidden="true"][required]');
+          add({qid:el.id,el,label:stripStar(own),kind:'choice',control:'aria_combobox',required:!!hidden||el.getAttribute('aria-required')==='true'||isRequiredText(own)});
+          continue;
+        }
         // Rows of repeated history tables (TRAC education/employment) are filled by their own adapters.
         if(/\.(gmrow|grrow)_\d+\./.test(el.id||''))continue;
         // Prefer the field's own <label>; textFor() also appends aria-label/placeholder copies.
@@ -105,6 +115,8 @@ function containerLabelPQ(el){
     for(const cb of document.querySelectorAll('input[type="checkbox"]')){
       if(!visible(cb)||!(cb.required||cb.getAttribute('aria-required')==='true'))continue;
       if(cb.name&&document.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(cb.name)}"]`).length>1)continue;
+      // One box of a group ("tick all that apply", each box with its own name) belongs to that group's question.
+      if((cb.closest('fieldset,[role="group"]')?.querySelectorAll('input[type="checkbox"]').length||0)>1)continue;
       const label=clean(document.querySelector(`label[for="${CSS.escape(cb.id||'')}"]`)?.innerText||'')||textFor(cb);
       add({qid:cb.id||'checkbox:'+cb.name,el:cb,label:stripStar(label),kind:'choice',control:'checkbox',required:true});
     }
@@ -123,7 +135,7 @@ function containerLabelPQ(el){
       if(!visible(c))continue;
       const sameName=c.name&&document.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(c.name)}"]`).length>1;
       const group=c.closest('fieldset,[role="group"]');
-      let key=sameName?'n:'+c.name:group?(boxKey.get(group)||(boxKey.set(group,'g:'+(group.id||++n)),boxKey.get(group))):null;
+      let key=sameName?'n:'+c.name:group?(boxKey.get(group)||(boxKey.set(group,'g:'+(group.getAttribute('data-ui')||group.id||++n)),boxKey.get(group))):null;
       if(key)(checks[key]=checks[key]||[]).push(c);
     }
     for(const [name,boxes] of Object.entries(checks)){
@@ -151,7 +163,7 @@ function containerLabelPQ(el){
       // Options wrapping ordinary visible inputs are already read as a native radio/checkbox group.
       if(opts.some(o=>[...o.querySelectorAll('input[type="radio"],input[type="checkbox"]')].some(visible)))continue;
       const label=ariaText(g)||groupLabel(opts[0]);if(!label)continue;
-      const qid='aria:'+(g.id||g.getAttribute('aria-labelledby')||clean(label).slice(0,60));
+      const qid='aria:'+(g.getAttribute('data-ui')||g.id||g.getAttribute('aria-labelledby')||clean(label).slice(0,60));
       add({qid,el:g,options:opts,label:stripStar(label),kind:'choice',control:role==='radio'?'aria_radio':'aria_checkbox',
         required:g.getAttribute('aria-required')==='true'||isRequiredText(label)});
     }
@@ -221,12 +233,32 @@ function containerLabelPQ(el){
       value:currentValue(c),sensitivity:c.sensitivity,signature:Q.signature(c.label),fillable:!READ_ONLY.has(c.control),
       max_length:c.el&&c.el.maxLength>0?c.el.maxLength:null,multiline:!!(c.el&&c.el.tagName==='TEXTAREA'),
       options:c.control==='checkbox'?['Yes']:c.control==='select'?[...c.el.options].map(o=>clean(o.text)).filter(t=>t&&!EMPTY.test(t))
-        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):c.control==='pressed_buttons'?c.options.map(o=>clean(o.innerText)):c.control==='range'?rangeOptions(c.el):/^aria_/.test(c.control)?c.options.map(ariaText):null}));
+        :c.control==='radio'||c.control==='checkbox_group'?c.radios.map(radioLabel):c.control==='pressed_buttons'?c.options.map(o=>clean(o.innerText)):c.control==='range'?rangeOptions(c.el):/^aria_/.test(c.control)&&c.options?c.options.map(ariaText):null}));
   }
 
+  // Workable-style list boxes: the options exist only while the list is open.
+  async function openCombobox(c){
+    c.el.scrollIntoView({block:'center'});
+    if(c.el.getAttribute('aria-expanded')!=='true')c.el.click();
+    for(let i=0;i<15;i++){
+      await sleep(80);
+      const box=document.getElementById(c.el.getAttribute('aria-controls')||c.el.getAttribute('aria-owns')||'');
+      const opts=[...(box||document).querySelectorAll('[role="option"]')];
+      if(opts.length)return opts;
+    }
+    return [];
+  }
+  async function closeCombobox(c){
+    if(c.el.getAttribute('aria-expanded')!=='true')return;
+    c.el.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',keyCode:27,bubbles:true}));
+    await sleep(120);
+    if(c.el.getAttribute('aria-expanded')==='true')c.el.click();
+    await sleep(80);
+  }
   // Workday dropdown options only exist while the list is open: open, read, close. No option is clicked.
   async function options(qid){
     const c=find(qid);if(!c)return {ok:false,reason:'Question not found on this page.'};
+    if(c.control==='aria_combobox'){const list=await openCombobox(c);const opts=list.map(o=>clean(o.innerText)).filter(t=>t&&!EMPTY.test(t));await closeCombobox(c);return {ok:true,options:opts}}
     if(c.control!=='workday_listbox')return {ok:true,options:questions().find(q=>q.qid===qid)?.options||[]};
     const before=currentValue(c);
     try{c.el.scrollIntoView({block:'center'});c.el.click()}catch(_){return {ok:false,reason:'Could not open the list.'}}
@@ -265,6 +297,10 @@ function containerLabelPQ(el){
         const o=[...c.el.options].find(o=>norm(o.text)===norm(wanted)||norm(o.value)===norm(wanted));
         if(!o)return {ok:false,reason:'That option is not offered here.'};
         c.el.value=o.value;c.el.dispatchEvent(new Event('input',{bubbles:true}));c.el.dispatchEvent(new Event('change',{bubbles:true}));
+      }else if(c.control==='aria_combobox'){
+        const o=(await openCombobox(c)).find(x=>norm(clean(x.innerText))===norm(wanted));
+        if(!o){await closeCombobox(c);return {ok:false,reason:'That option is not offered here.'}}
+        o.click();await sleep(150);await closeCombobox(c);
       }else if(c.control==='checkbox'){
         if(norm(wanted)!=='yes')return {ok:false,reason:'Leave this box unticked on the page if you do not agree.'};
         if(!c.el.checked)c.el.click();
