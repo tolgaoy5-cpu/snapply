@@ -108,4 +108,7 @@ with tempfile.TemporaryDirectory() as td:
     assert calls == []
     set_master_profile({'full_name': 'Old', 'import_meta': {'parser': 'deterministic-v0.20'}})
     assert server._refresh_profile_from_saved_cv_if_needed()['master_profile']['full_name'] == 'Re-read' and len(calls) == 1
+    # A profile the user changed in "Edit profile" is kept even when its importer is old.
+    set_master_profile({'full_name': 'Edited', 'import_meta': {'parser': 'deterministic-v0.20', 'user_edited': True}})
+    assert server._refresh_profile_from_saved_cv_if_needed()['master_profile']['full_name'] == 'Edited' and len(calls) == 1
 print('profile refresh ok')

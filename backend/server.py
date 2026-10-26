@@ -218,9 +218,9 @@ def _refresh_profile_from_saved_cv_if_needed():
     profile=state.get('master_profile') or {}
     parser=(profile.get('import_meta') or {}).get('parser')
     meta=get_saved_cv_meta(); content=get_saved_cv_bytes()
-    # Profiles from a current importer are kept as they are (and keep the user's edits); only profiles
-    # from older importers are read again from the saved CV.
-    if parser in CURRENT_PARSERS or not meta or content is None:
+    # Profiles from a current importer, or edited by the user in "Edit profile", are kept as they are; only
+    # untouched profiles from older importers are read again from the saved CV.
+    if parser in CURRENT_PARSERS or (profile.get('import_meta') or {}).get('user_edited') or not meta or content is None:
         return state
     suffix=Path(meta.get('name') or 'cv.pdf').suffix.lower() or '.pdf'
     path=None

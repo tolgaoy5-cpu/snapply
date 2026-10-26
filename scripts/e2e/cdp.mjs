@@ -5,9 +5,25 @@
 //   node cdp.mjs go <url>                 navigate the page tab
 //   node cdp.mjs click '<button text>'    real mouse click on the first visible button/link with that text
 //   node cdp.mjs clicksel '<css selector>' real mouse click on the element matching the selector
+//   node cdp.mjs xy '<x>,<y>'               real mouse click at page coordinates
+//   node cdp.mjs reload-ext                 load changed extension code without closing the window (keeps site logins)
 import fs from 'node:fs';
 
 const [, , CMD, ARG] = process.argv;
+if (CMD === 'reload-ext') {
+  // Via chrome://extensions: developer mode must be on, or reloading an unpacked extension disables it.
+  const tab = await (await fetch('http://127.0.0.1:9342/json/new?chrome://extensions/', {method: 'PUT'})).json();
+  await new Promise(r => setTimeout(r, 2000));
+  const w = new WebSocket(tab.webSocketDebuggerUrl); await new Promise(r => w.onopen = r);
+  let n = 0;
+  const ev = expression => new Promise(r => {const i = ++n; w.onmessage = e => {const m = JSON.parse(e.data); if (m.id === i) r(m.result?.result?.value)}; w.send(JSON.stringify({id: i, method: 'Runtime.evaluate', params: {expression, awaitPromise: true, returnByValue: true}}))});
+  await ev(`new Promise(r=>chrome.developerPrivate.updateProfileConfiguration({inDeveloperMode:true},()=>r(1)))`);
+  const id = await ev(`new Promise(r=>chrome.developerPrivate.getExtensionsInfo({includeDisabled:true},l=>r(l.find(x=>x.name==='Snapply')?.id)))`);
+  await ev(`new Promise(r=>{chrome.developerPrivate.reload('${id}',{failQuietly:true});setTimeout(()=>chrome.management.setEnabled('${id}',true,()=>r(1)),1500)})`);
+  console.log('reloaded', await ev(`new Promise(r=>chrome.developerPrivate.getExtensionsInfo({includeDisabled:true},l=>r(l.map(x=>x.state+' '+x.version).join())))`));
+  w.close(); await fetch(`http://127.0.0.1:9342/json/close/${tab.id}`);
+  process.exit(0);
+}
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const list = await (await fetch('http://127.0.0.1:9342/json/list')).json();
 const page = list.find(t => t.type === 'page' && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('devtools://'));
@@ -32,6 +48,10 @@ if (CMD === 'shot') {
   const p = r.result?.result?.value;
   if (!p) console.log('not found');
   else {for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', {type, x: p.x, y: p.y, button: 'left', clickCount: 1}); await sleep(3000); console.log('clicked')}
+} else if (CMD === 'xy') {
+  const [x, y] = ARG.split(',').map(Number);
+  for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', {type, x, y, button: 'left', clickCount: 1});
+  await sleep(1500); console.log('clicked');
 } else if (CMD === 'go') {
   await send('Page.navigate', {url: ARG}); await sleep(4000); console.log('ok');
 } else {
