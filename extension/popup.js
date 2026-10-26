@@ -248,13 +248,17 @@ function renderTrainingChoice(p){
 // Legal declarations and personal data are only proposed; the user confirms each time.
 function el(tag,props={},kids=[]){const n=document.createElement(tag);Object.assign(n,props);kids.forEach(k=>n.append(k));return n}
 const SENSITIVITY_NOTE={legal:'Legal declaration · confirm every time',sensitive:'Personal data · confirm every time',review:'Job-specific answer · confirm every time'};
+const CERTS_QUESTION=/training courses|courses (?:you have )?attended|formal training|certificat|professional development|\bcpd\b|other (?:relevant )?qualifications/i;
 async function answerQuestions(){
   const page=await send('PAGE_QUESTIONS').catch(()=>null);
   if(!page?.ok){renderAsk([]);return {filled:0,ask:0,askedIds:new Set()}}
   let saved=[];try{saved=await window.JobCopilotMemory.getAnswers()}catch(_){}
+  // "Training courses attended", "Certificates", "Professional development": the CV's own certificate list.
+  let certs=[];try{certs=((await profile()).certifications||[]).map(c=>String(c?.name||c||'').trim()).filter(Boolean)}catch(_){}
   const ask=[],optional=[];let filled=0,answered=0,unsaved=0,optionalPersonal=0;
   for(const q of page.questions){
     if(q.value){answered++;if(q.sensitivity!=='never'&&!window.JobCopilotQuestions.findMatch(saved,{...q,options:null}))unsaved++;continue}
+    if(q.kind==='text'&&CERTS_QUESTION.test(q.label||'')){q.certificates=true;if(certs.length)q.cvSuggestion=certs.join('\n')}
     let match=window.JobCopilotQuestions.findMatch(saved,q);
     if(!match&&!q.required){
       if(q.sensitivity==='sensitive'||q.sensitivity==='legal')optionalPersonal++;
@@ -262,7 +266,7 @@ async function answerQuestions(){
       if(q.kind==='choice'&&!q.options&&q.fillable&&q.control==='react_select')q.options=await questionOptions(q);
       if(q.kind==='choice'&&!q.options?.length&&q.control==='workday_listbox')q.fillable=false;
       if(q.control==='react_select'&&!q.options?.length)q.fillable=false;
-      optional.push({...q,suggestion:''});continue;
+      optional.push({...q,suggestion:q.cvSuggestion||''});continue;
     }
     if(q.kind==='choice'&&!q.options&&q.fillable){q.options=await questionOptions(q);match=window.JobCopilotQuestions.findMatch(saved,q)}
     // Lists whose options load only while typing (e.g. location search) are answered on the page.
@@ -272,7 +276,7 @@ async function answerQuestions(){
       if(f.ok){filled++;continue}
       q.error=f.reason;
     }
-    ask.push({...q,suggestion:match?.item?.value||''});
+    ask.push({...q,suggestion:match?.item?.value||q.cvSuggestion||''});
   }
   renderAsk(ask,{answered,unsaved,optionalPersonal,optional});
   return {filled,ask:ask.length,answered,unsaved,optionalPersonal,optional:optional.length,askedIds:new Set([...ask,...optional].map(q=>q.qid))};
@@ -286,7 +290,7 @@ function askCard(q){
     :el('textarea',{value:q.suggestion||'',placeholder:'Your answer'});
   // Job-specific statements are not remembered unless the user ticks it.
   const remember=el('input',{type:'checkbox',checked:q.sensitivity!=='review'});
-  const status=el('div',{className:'muted',textContent:q.error?`Could not use the saved answer: ${q.error}`:''});
+  const status=el('div',{className:'muted',textContent:q.error?`Could not use the saved answer: ${q.error}`:q.cvSuggestion&&q.suggestion===q.cvSuggestion?'From the certificates in your CV — add dates if the form asks for them, then fill.':''});
   const confirmSaved=q.suggestion&&q.sensitivity!=='normal';
   const go=el('button',{textContent:confirmSaved?'Confirm & fill':'Fill & remember'});
   go.onclick=async()=>{try{
@@ -306,7 +310,8 @@ function askCard(q){
   // built only from CV evidence that matches the job's requirements. The user edits it before filling.
   // AI drafts are for written answers, not facts only the user knows (dates, numbers, ids).
   const factual=/\bdate\b|start(?:ing)? date|available from|when can you start|\bnumber\b|\b(?:ni|ni number|postcode|phone|email)\b|how many|years? of|\bsalary\b|\bgrade\b|\bband\b/i.test(q.label||'');
-  const draftable=q.kind==='text'&&!factual&&(q.sensitivity==='normal'||q.sensitivity==='review')&&aiReady;
+  // Certificate/training questions take the CV's list (shown in the box), not a written AI answer.
+  const draftable=q.kind==='text'&&!factual&&!q.certificates&&(q.sensitivity==='normal'||q.sensitivity==='review')&&aiReady;
   const draft=draftable?el('button',{textContent:'Draft with AI'}):null;
   if(draft)draft.onclick=async()=>{try{
     draft.disabled=true;status.className='muted';status.textContent='Drafting from your CV and the job requirements…';

@@ -9,8 +9,10 @@
   const isEducation=()=>onTrac()&&!!document.getElementById('EditAppFieldset')&&((!!find(0,'Subject')&&!!find(0,'Place'))||grouped());
   const clean=x=>String(x||'').trim();
   function yearFromDates(dates){
+    // The year it was obtained: the end of a range, or the only year given; none while still studying.
+    if(/present|current|ongoing|expected/i.test(clean(dates)))return null;
     const parts=clean(dates).match(/\b(?:19|20)\d{2}\b/g)||[];
-    return parts.length>=2?parts[parts.length-1]:null;
+    return parts.length?parts[parts.length-1]:null;
   }
   function records(profile){return (profile?.education||[]).filter(x=>!x.needs_confirmation).map(x=>({
     subject:clean(x.degree),place:clean(x.institution),grade:clean(x.grade||x.result),year:yearFromDates(x.dates)
@@ -110,11 +112,22 @@
   const isCurrentJob=()=>!!currentField('empname')&&!!currentField('jobtitle');
   const isEmployer=()=>onTrac()&&!!document.getElementById('EditAppFieldset')&&((!!employerField(0,'empname')&&!!employerField(0,'jobtitle'))||isCurrentJob());
   const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // CV date ranges in any common form: "03/2021 - Present", "Sep 2019 – Mar 2023", "September 2021 to date", "2019 - 2022".
+  const MONTH_RX=/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
+  function datePart(raw){
+    const t=clean(raw).replace(/[.,]/g,' ').replace(/\s+/g,' ');
+    if(/^(present|current|now|to date|date|ongoing)$/i.test(t))return {current:true};
+    let m=t.match(/^(\d{1,2})\s*[\/.-]\s*((?:19|20)\d{2})$/);if(m)return {month:months[Number(m[1])-1]||'',year:m[2]};
+    m=t.match(/^([a-z]+)\s+((?:19|20)\d{2})$/i);if(m&&MONTH_RX.test(m[1]))return {month:months.find(x=>x.slice(0,3).toLowerCase()===m[1].slice(0,3).toLowerCase())||'',year:m[2]};
+    m=t.match(/^((?:19|20)\d{2})$/);if(m)return {month:'',year:m[1]};
+    return {};
+  }
   function employmentDates(dates){
-    const m=clean(dates).match(/^(\d{2})\/(\d{4})\s*[-–—]\s*(Present|Current|(\d{2})\/(\d{4}))$/i);
-    if(!m)return {};
-    return {start_month:months[Number(m[1])-1]||'',start_year:m[2],
-      end_month:m[4]?months[Number(m[4])-1]||'':'',end_year:m[5]||'',current:/present|current/i.test(m[3])};
+    const parts=clean(dates).split(/\s*(?:[-–—]|\bto\b|\buntil\b)\s*/i).filter(Boolean);
+    if(!parts.length||parts.length>2)return {};
+    const a=datePart(parts[0]),b=parts[1]?datePart(parts[1]):{};
+    if(!a.year)return {};
+    return {start_month:a.month||'',start_year:a.year,end_month:b.month||'',end_year:b.year||'',current:!!b.current};
   }
   function employerRecords(profile){
     return (profile?.experience||[]).filter(x=>!x.needs_confirmation).map(x=>({
