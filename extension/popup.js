@@ -323,11 +323,14 @@ function askCard(q){
     if(!job?.requirements?.length)throw new Error('Open the job advert and press “Read job description” first, then come back to this page.');
     const r=await window.JobCopilotAPI.post('/v1/answers/generate',{question:q.label,profile:await profile(),job,character_limit:q.max_length>0&&q.max_length<=20000?q.max_length:null});
     if(r.status==='ASK_USER'||!r.answer)throw new Error('Your CV has no evidence that matches this question. Please write it yourself.');
-    control.value=r.answer;remember.checked=false;if(r.letter){control.rows=16;control.style.minHeight='260px'}
+    control.value=r.answer;remember.checked=false;
+    // A new draft can be filled again, even when an earlier answer was already put on the page.
+    if(!go.isConnected){go.textContent='Fill on the page';go.disabled=false;draft.before(go)}
+if(r.letter){control.rows=16;control.style.minHeight='260px'}
     const claims=[...(r.validation?.unsupported_claims||[])];
     status.className=claims.length?'ask':'muted';
     const removedN=(r.removed_sentences||[]).length;
-    status.textContent=`${r.letter?`Tailored letter (${r.word_count} words)`:'AI draft'} for “${job.title||'the saved job'}”, written only from your CV and the advert — check it and edit before filling.${removedN?` ${removedN} sentence${removedN>1?'s':''} that went beyond your CV ${removedN>1?'were':'was'} trimmed or removed.`:''}${claims.length?` Not supported by your CV: ${claims.join('; ')}`:''}`;
+    status.textContent=`${r.letter?`Tailored letter (${r.word_count} words)`:'AI draft'} for “${job.title||'the saved job'}”, written only from your CV and the advert — check it, edit it, then press “${go.textContent}”.${removedN?` ${removedN} sentence${removedN>1?'s':''} that went beyond your CV ${removedN>1?'were':'was'} trimmed or removed.`:''}${claims.length?` Not supported by your CV: ${claims.join('; ')}`:''}`;
   }catch(e){status.className='block';status.textContent=e.message}finally{draft.disabled=false}};
   return el('div',{className:'ask-card'},[
     el('div',{textContent:q.label}),

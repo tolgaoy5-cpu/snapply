@@ -310,12 +310,16 @@ function containerLabelPQ(el){
           // Some widgets only react to their hidden input.
           if(!ariaChecked(o)){const inp=o.querySelector('input');if(inp){inp.click();if(!inp.checked){inp.checked=true;inp.dispatchEvent(new Event('change',{bubbles:true}))}}}
         }
-      }else setText(c.el,wanted);
+      }else{
+        // Text boxes keep the answer's line breaks (cover letters); one-line inputs get the tidied text.
+        const text=c.el instanceof HTMLTextAreaElement?String(value).replace(/\r\n?/g,'\n').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim():wanted;
+        setText(c.el,text);
+      }
     }catch(e){return {ok:false,reason:String(e?.message||e).slice(0,120)}}
     await sleep(120);
     const now=currentValue(find(qid)||c);
     const target=c.control==='range'?(String(wanted).match(/\d+(?:\.\d+)?/)||[''])[0]:wanted;
-    const ok=c.kind==='choice'?norm(now)===norm(target):now===target;
+    const ok=c.kind==='choice'?norm(now)===norm(target):clean(now)===clean(target);
     return ok?{ok:true,value:now}:{ok:false,reason:'The page did not keep the answer.',value:now};
   }
 
