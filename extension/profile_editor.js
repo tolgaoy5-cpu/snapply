@@ -30,13 +30,30 @@
     return out.length<=2&&out.every(x=>x!==null)?out.join('-'):text;   // keep the user's text if it is unusual
   }
 
+  // A job's dates as start and end boxes; "I currently work here" replaces the end date.
+  function splitDates(raw){
+    const bits=String(raw||'').split(/\s*(?:[-–—]|\bto\b|\buntil\b)\s*/i).filter(Boolean);
+    const current=/^(present|current|now|to date|date|ongoing)$/i.test(bits[1]||'');
+    return {start:bits[0]||'',end:current?'':(bits[1]||''),current};
+  }
   function jobRow(job){
-    const role=input(job.role,'Job title'),employer=input(job.employer,'Employer'),dates=input(job.dates,'e.g. Sep 2021 – Present'),
-      duties=input(job.evidence,'Main duties (optional)',true);
+    const d=splitDates(job.dates);
+    const role=input(job.role,'Job title'),employer=input(job.employer,'Employer'),
+      start=input(d.start,'e.g. Aug 2024'),end=input(d.end,'e.g. Mar 2023'),
+      current=el('input',{type:'checkbox',checked:d.current}),duties=input(job.evidence,'Main duties (optional)',true);
     const remove=el('button',{type:'button',className:'linkish',textContent:'Remove this job'});
-    const box=el('div',{className:'card pe-row'},[field('Job title',role),field('Employer',employer),field('Dates',dates),field('Duties',duties),remove]);
+    const box=el('div',{className:'card pe-row'},[field('Job title',role),field('Employer',employer),field('Start',start),
+      el('label',{className:'pe-check'},[current,' I currently work here']),field('End',end),field('Duties',duties),remove]);
+    const sync=()=>{end.disabled=current.checked;end.parentElement.hidden=current.checked};sync();
+    // Only one current job: ticking this one ends the others, at this job's start date when they have no end yet.
+    current.onchange=()=>{sync();if(!current.checked)return;
+      for(const other of box.parentElement?.children||[])if(other!==box&&other.isCurrent?.())other.endAt(start.value.trim())};
+    box.isCurrent=()=>current.checked;
+    box.endAt=date=>{current.checked=false;if(!end.value.trim())end.value=date;sync()};
     remove.onclick=()=>box.remove();
-    box.read=()=>({...job,role:role.value.trim(),employer:employer.value.trim(),dates:normaliseDates(dates.value),evidence:duties.value.trim()});
+    box.read=()=>({...job,role:role.value.trim(),employer:employer.value.trim(),
+      dates:normaliseDates(start.value.trim()?`${start.value.trim()} - ${current.checked?'Present':end.value.trim()}`.replace(/\s-\s$/,''):''),
+      evidence:duties.value.trim()});
     return box;
   }
   function eduRow(ed){
@@ -58,7 +75,7 @@
     const edus=el('div',{},(p.education||[]).map(eduRow));
     const certs=input((p.certifications||[]).map(c=>c?.name||c).join('\n'),'One certificate or course per line',true);
     const addJob=el('button',{type:'button',textContent:'+ Add a job (newest first)'});
-    addJob.onclick=()=>jobs.prepend(jobRow({}));
+    addJob.onclick=()=>{const row=jobRow({});jobs.prepend(row);row.querySelector('input').focus()};
     const addEdu=el('button',{type:'button',textContent:'+ Add education'});
     addEdu.onclick=()=>edus.append(eduRow({}));
     const save=el('button',{type:'button',className:'primary-small',textContent:'Save profile'});
