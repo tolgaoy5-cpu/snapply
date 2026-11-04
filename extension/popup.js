@@ -89,7 +89,7 @@ function savedPostingForApplication(saved,pageUrl){
     return !!id(a)&&id(a)===id(b);
   }catch(_){return false}
 }
-async function refreshProfileState(){renderSavedAnswers();const p=await profile();byId('profileState').textContent=p.full_name?`${p.full_name} · ${(p.experience||[]).length} experience · ${(p.education||[]).length} education${p.unresolved?.length?` · ${p.unresolved.length} needs review`:''}`:'No CV imported yet.';await renderUnresolved();await refreshSavedCVState()}
+async function refreshProfileState(){renderSavedAnswers();const p=await profile();byId('profileState').textContent=p.full_name?`${p.full_name} · ${(p.experience||[]).length} experience · ${(p.education||[]).length} education${p.unresolved?.length?` · ${p.unresolved.length} needs review`:''}`:'No CV imported yet.';await refreshOnboarding(p);await renderUnresolved();await refreshSavedCVState()}
 async function refreshSavedCVState(){
   const el=byId('savedCVState');if(!el)return;
   try{
@@ -99,7 +99,16 @@ async function refreshSavedCVState(){
   }catch(e){el.textContent=/sign in|connection/i.test(e?.message||'')?e.message:'Saved CV status unavailable. Reopen this panel; do not re-import the CV.';}
 }
 
-byId('importCV').onclick=async()=>{forgetServerState();try{const f=byId('cvFile').files?.[0];if(!f)throw new Error('Choose a CV file first.');byId('summary').textContent='Importing and saving CV…';const d=await window.JobCopilotAPI.uploadCV(f);await chrome.storage.local.set({masterProfile:d.profile});const saved=await window.JobCopilotSavedCV.saveLocal(f);await refreshProfileState();byId('summary').textContent=(d.review_required?'CV imported · review unresolved items':'CV imported successfully')+` · saved ${saved.name}`;show({...d,saved_cv:{name:saved.name,size:saved.size,type:saved.type}})}catch(e){show({error:e.message})}};
+async function importCVFile(f){forgetServerState();if(!f)throw new Error('Choose a CV file first.');byId('summary').textContent='Importing and saving CV…';const d=await window.JobCopilotAPI.uploadCV(f);await chrome.storage.local.set({masterProfile:d.profile});const saved=await window.JobCopilotSavedCV.saveLocal(f);await refreshProfileState();byId('summary').textContent=(d.review_required?'CV imported · review unresolved items':'CV imported successfully')+` · saved ${saved.name}`;show({...d,saved_cv:{name:saved.name,size:saved.size,type:saved.type}});return d}
+byId('importCV').onclick=async()=>{try{await importCVFile(byId('cvFile').files?.[0])}catch(e){show({error:e.message})}};
+// First run: a big "Upload your CV" step until there is a profile (new users otherwise stop after signing in).
+byId('onboardFile')?.addEventListener('change',async e=>{const st=byId('onboardState');try{st.className='muted';st.textContent='Reading your CV…';justOnboarded=true;const d=await importCVFile(e.target.files?.[0]);const box=byId('onboard');box.querySelector('.ob-step').textContent='Step 2 of 2';box.querySelector('h2').textContent='Now open a job application';box.querySelector('.ob-pick').hidden=true;box.querySelector('p').hidden=true;st.className='done';st.textContent=`Done: ${(d.profile?.experience||[]).length} jobs and ${(d.profile?.education||[]).length} qualifications found. Check them under My Profile → Edit profile.`}catch(err){justOnboarded=false;st.className='block';st.textContent=err.message}finally{e.target.value=''}});
+let justOnboarded=false;
+async function refreshOnboarding(p){const box=byId('onboard');if(!box)return;
+  let signedOut=false;try{signedOut=await window.JobCopilotAPI.isCloud()&&!(await window.JobCopilotAPI.session())}catch(_){}
+  box.hidden=(!!p?.full_name&&!justOnboarded)||signedOut;
+  if(!box.hidden&&!p?.full_name)byId('summary').textContent='Welcome! Start by uploading your CV below.';}
+window.addEventListener('snapply-signed-in',()=>refreshProfileState().catch(()=>{}));
 
 byId('attachSavedCV').onclick=async()=>{try{
   const cv=await window.JobCopilotSavedCV.getPayload();
@@ -442,7 +451,8 @@ byId('fillAllSafe').onclick=async()=>{send('FILL_FX',{on:true}).catch(()=>{});tr
   await renderDocumentAsks();
   await renderCoverLetterAsk();
   show({section,deterministic,options,answers:{filled:answers.filled,ask:answers.ask},required});
-  reportFillStats({deterministic,required,attached});
+  // TRAC history rows and saved answers count as filled too (they are not in the profile filler's results).
+  reportFillStats({deterministic,required,attached,extra:(section?.ok?section.rows?.length||0:0)+(answers.filled||0)});
   byId('reportAfterFill')&&(byId('reportAfterFill').hidden=false);
   maybeAskForReview((deterministic?.results||[]).filter(x=>x.filled).length);
   // Bring what needs the user into view: their questions first, otherwise the review results.
@@ -910,12 +920,12 @@ async function learnFields(){
 }
 // Anonymous fill quality per site: counts only (no values, labels, page path or user id), so sites
 // where Snapply fills poorly show up in `admin.py fills` and get fixed.
-async function reportFillStats({deterministic,required,attached}){try{
+async function reportFillStats({deterministic,required,attached,extra=0}){try{
   // The in-page panel knows its page from the frame's ancestor; the toolbar popup asks for the active tab.
   const url=location.ancestorOrigins?.[0]||(await active())?.url||'';if(!/^https?:/.test(url))return;
   const res=deterministic?.results||[],cv=attached?.names?.length||0;
   await window.JobCopilotAPI.post('/v1/fill-stats',{host:new URL(url).hostname,ats:String(required?.ats||'').slice(0,40),
-    detected:res.length,filled:res.filter(x=>x.filled).length,required_total:required?.required_total||0,
+    detected:res.length+extra,filled:res.filter(x=>x.filled).length+extra,required_total:required?.required_total||0,
     required_missing:required?.missing_count||0,cv_slots:cv+(attached?.problems?.length||0),cv_attached:cv});
 }catch(_){/* stats are best effort */}}
 // After a few fills that worked, ask once for a Web Store review ("Not now" asks again much later; never after a review).

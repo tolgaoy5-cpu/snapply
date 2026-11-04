@@ -503,8 +503,10 @@ async def profile_import(file:UploadFile=File(...)):
         profile.setdefault('import_meta',{})['original_filename']=file.filename
         set_master_profile(profile)
         cv_meta=save_cv(content,filename=file.filename or 'cv'+suffix,content_type=file.content_type or 'application/octet-stream')
+        analytics.record('cv_imported')
         return {'ok':True,'profile':profile,'review_required':bool(profile.get('unresolved')),'saved_cv':cv_meta}
     except Exception as e:
+        analytics.record('cv_import_failed')
         raise HTTPException(status_code=422,detail=f'Could not import CV: {e}')
     finally:
         if path:
