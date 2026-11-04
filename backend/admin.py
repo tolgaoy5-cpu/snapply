@@ -65,6 +65,17 @@ def main(argv: list[str]) -> int:
             cv = f"{r['cv_attached']}/{r['cv_slots']}" if r["cv_slots"] else "-"
             print(f"{host[:40]:40} {r['fills']:5} {rate(r) * 100:7.0f}% {r['required_missing'] / r['fills']:16.1f} {cv:>11}  {r.get('ats', '')}")
         return 0
+    if len(argv) >= 2 and argv[1] == "missed":
+        import analytics
+        days = int(argv[2]) if len(argv) > 2 else 7
+        rows = analytics.missed_summary(days)
+        print(f"Required fields left empty on real users' forms, last {days} days (label | Snapply's guess)")
+        for host, labels in sorted(rows.items(), key=lambda kv: -sum(kv[1].values())):
+            print(host)
+            for k, n in sorted(labels.items(), key=lambda kv: -kv[1])[:25]:
+                label, _, key = k.rpartition("|")
+                print(f"  {n:4}  {label[:70]:70} {key}")
+        return 0
     if len(argv) >= 2 and argv[1] == "reports":
         folder = accounts.data_root() / "reports"
         files = sorted(folder.glob("*.json")) if folder.exists() else []

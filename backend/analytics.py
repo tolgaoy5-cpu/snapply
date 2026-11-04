@@ -61,7 +61,7 @@ def _clean_host(host: str) -> str:
     return (host[4:] if host.startswith("www.") else host)[:80] or "unknown"
 
 
-def record_fill(host: str, ats: str = "", **counts: int) -> None:
+def record_fill(host: str, ats: str = "", missed: list | None = None, **counts: int) -> None:
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     path = data_root() / "fills" / f"{day}.json"
     with _LOCK:
@@ -75,7 +75,30 @@ def record_fill(host: str, ats: str = "", **counts: int) -> None:
             row[k] = row.get(k, 0) + max(0, min(500, int(counts.get(k) or 0)))
         if ats:
             row["ats"] = _clean_source(ats)
+        # Required fields left empty, by the form's own wording: "label|key" -> times seen (capped per host).
+        labels = row.setdefault("missed", {})
+        for m in (missed or [])[:12]:
+            label = " ".join(str(m.get("label", "")).split())[:80]
+            if label and (label in labels or len(labels) < 100):
+                k = f"{label}|{str(m.get('key', 'unknown'))[:30]}"
+                labels[k] = labels.get(k, 0) + 1
         _write_json(path, data)
+
+
+def missed_summary(days: int = 7) -> dict:
+    """Required-field labels left empty on real users' forms: {host: {"label|key": count}}."""
+    out: dict = {}
+    today = datetime.now(timezone.utc).date()
+    for i in range(days):
+        day = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        try:
+            data = json.loads((data_root() / "fills" / f"{day}.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        for host, row in data.items():
+            for k, n in (row.get("missed") or {}).items():
+                out.setdefault(host, {})[k] = out.get(host, {}).get(k, 0) + n
+    return out
 
 
 def fill_summary(days: int = 7) -> dict:

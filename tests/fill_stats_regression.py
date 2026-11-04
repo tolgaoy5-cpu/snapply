@@ -29,4 +29,13 @@ with TemporaryDirectory() as td:
         assert admin.main(['admin.py', 'fills', '1']) == 0
     lines = out.getvalue().splitlines()
     assert '2 fills on 2 sites' in lines[0] and lines[2].startswith('careers.badsite.com'), lines
+    # Labels of required fields left empty are kept per host (wording only, emails and long numbers removed client-side).
+    miss = {**stats, 'missed': [{'label': 'Contact number', 'key': 'unknown'}, {'label': 'Contact number', 'key': 'unknown'}]}
+    assert c.post('/v1/fill-stats', json=miss, headers=h).status_code == 200
+    assert analytics.missed_summary(1)['jobs.nhs.uk']['Contact number|unknown'] == 2
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        assert admin.main(['admin.py', 'missed', '1']) == 0
+    assert 'Contact number' in out.getvalue() and 'jobs.nhs.uk' in out.getvalue()
+    assert c.post('/v1/fill-stats', json={**stats, 'missed': [{'label': 'x'}] * 13}, headers=h).status_code == 422
 print('fill stats ok')

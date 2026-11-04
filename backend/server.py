@@ -406,7 +406,7 @@ async def site_event(request:Request):
     return {'ok':analytics.record(r.name,r.source)}
 
 class FillStats(BaseModel):
-    # Counts only: which site (host name) and how much of its form was filled. No values, labels or user id.
+    # Which site (host name), how much of its form was filled, and the labels of required fields left empty. No values or user id.
     host:str=Field(min_length=1,max_length=200)
     ats:str=Field(default='',max_length=40)
     detected:int=Field(default=0,ge=0,le=10000)
@@ -415,10 +415,12 @@ class FillStats(BaseModel):
     required_missing:int=Field(default=0,ge=0,le=10000)
     cv_slots:int=Field(default=0,ge=0,le=100)
     cv_attached:int=Field(default=0,ge=0,le=100)
+    # Wording of required fields left empty (the form's labels, no values).
+    missed:list[dict[str,str]]=Field(default_factory=list,max_length=12)
 
 @app.post('/v1/fill-stats')
 def fill_stats(r:FillStats):
-    analytics.record_fill(r.host,r.ats,**r.model_dump(exclude={'host','ats'}))
+    analytics.record_fill(r.host,r.ats,missed=r.missed,**r.model_dump(exclude={'host','ats','missed'}))
     return {'ok':True}
 
 class WaitlistRequest(BaseModel):

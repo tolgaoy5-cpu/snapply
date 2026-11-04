@@ -926,7 +926,9 @@ async function reportFillStats({deterministic,required,attached,extra=0}){try{
   const res=deterministic?.results||[],cv=attached?.names?.length||0;
   await window.JobCopilotAPI.post('/v1/fill-stats',{host:new URL(url).hostname,ats:String(required?.ats||'').slice(0,40),
     detected:res.length+extra,filled:res.filter(x=>x.filled).length+extra,required_total:required?.required_total||0,
-    required_missing:required?.missing_count||0,cv_slots:cv+(attached?.problems?.length||0),cv_attached:cv});
+    required_missing:required?.missing_count||0,cv_slots:cv+(attached?.problems?.length||0),cv_attached:cv,
+    // The form's own wording of required fields still empty (never values), so unrecognised wordings can be fixed.
+    missed:(required?.items||[]).filter(x=>x.status!=='COMPLETE'&&x.label).slice(0,12).map(x=>({label:String(x.label).replace(/\S+@\S+/g,'').replace(/\d{5,}/g,'').slice(0,80),key:String(x.canonical||'unknown').slice(0,30)}))});
 }catch(_){/* stats are best effort */}}
 // After a few fills that worked, ask once for a Web Store review ("Not now" asks again much later; never after a review).
 const REVIEW_URL='https://chromewebstore.google.com/detail/snapply/pbciplmicohoeflmnjapakibfgbmjcmb/reviews';
