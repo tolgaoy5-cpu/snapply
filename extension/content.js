@@ -128,6 +128,12 @@ function phoneForField(key,label,value){
   return String(value).trim().replace(/^\+44\s?(?:\(0\)\s?)?|^0/,'');
 }
 function flatProfile(p){const loc=p.location||[p.city,p.country].filter(Boolean).join(', ');return {full_name:p.full_name||[p.first_name,p.last_name].filter(Boolean).join(' '),location:loc,linkedin:p.linkedin,github:p.github,website:p.website,application_source:p.application_source,first_name:p.first_name,last_name:p.last_name,email:p.email,country:p.country,phone_country_code:p.phone_country_code||p.country,phone:p.phone,phone_device_type:p.phone_device_type,phone_extension:p.phone_extension,address:p.address||p.address_line1,address_full:[p.address||p.address_line1,p.address_line2,p.city,p.postcode].filter(Boolean).join(', '),address_line2:p.address_line2,address_line3:p.address_line3,city:p.city,region:p.region||p.city,postcode:p.postcode,title:p.title,recent_nhs_experience:p.recent_nhs_experience,right_to_work:p.right_to_work,sponsorship:p.sponsorship,notice_period:p.notice_period,salary_expectation:p.salary_expectation}}
+// A single "Current job title" / "Current employer" box (not a history row) takes the CV's current job.
+function currentJobValue(key,label,profile){
+  if(!['job_title','employer'].includes(key)||!/\b(current|currently|most recent|present)\b/i.test(label||''))return undefined;
+  const jobs=profile?.experience||[];const job=jobs.find(j=>/present|current|now/i.test(j.dates||''))||jobs[0];
+  return job?(key==='job_title'?job.role:job.employer)||undefined:undefined;
+}
 function confidenceFor(key,value,el){if(key==='unknown'||value===undefined||value===null||value==='')return 'ASK_USER';if(key==='country'&&el?.tagName==='INPUT'&&el.tagName!=='SELECT')return 'MEDIUM';if(['supporting_statement','salary_expectation','notice_period','resume','title','application_source','phone_device_type'].includes(key))return 'MEDIUM';return 'HIGH'}
 function currentField(original){
  if(original.isConnected!==false)return original;
@@ -151,7 +157,7 @@ function fill(profile){
  const decisions=new Map(reviewPlan(profile).map(item=>[item.index,item.decision]));
  for(let index=0;index<els.length;index++){
    const el=els[index];
-   const label=textFor(el),key=canonical(label,el),value=phoneForField(key,label,simple[key]),questionType=classifyQuestion(label);
+   const label=textFor(el),key=canonical(label,el),value=phoneForField(key,label,simple[key]??currentJobValue(key,label,profile)),questionType=classifyQuestion(label);
    // Never put the applicant's own details into rows about other people or other jobs
    // (TRAC referee/employer/education rows: "Referee's first name", "City / Town", "Telephone").
    if(/\.(gmrow|grrow)_\d+\./.test(el.id||'')||/referee|reference|next of kin|emergency contact/i.test(label)||ABOUT_SOMEONE_ELSE(label,el,key)){out.push({label,key,questionType,decision:'SKIP',confidence:'SKIP',filled:false,reason:'Third-party or history row'});continue}
@@ -187,7 +193,7 @@ function reviewPlan(profile){
  const confirmed=profile?.__confirmed_memory||{};
  const seenChoiceGroups=new Set();
  return fields.map(f=>{
-   const q=classifyQuestion(f.label), value=simple[f.canonical];
+   const q=classifyQuestion(f.label), value=simple[f.canonical]??currentJobValue(f.canonical,f.label,profile);
    // Collapse repeated Greenhouse honorific checkbox choices into one review item.
    if(f.canonical==='title'){
      const groupKey=f.name||String(f.id||'').replace(/_\d+$/,'')||'title';
