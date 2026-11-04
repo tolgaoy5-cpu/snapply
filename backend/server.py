@@ -32,7 +32,7 @@ app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_OR
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
 
 # Routes that work without a session in cloud mode.
-PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist','/v1/events'}
+PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist','/v1/events','/v1/unsubscribe'}
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
@@ -428,6 +428,24 @@ def waitlist(r:WaitlistRequest):
     accounts.add_to_waitlist(r.email)
     analytics.record('waitlist_join')
     return {'ok':True}
+
+class MarketingChoice(BaseModel):
+    opt_in:bool
+
+@app.post('/v1/me/marketing')
+def me_marketing(r:MarketingChoice):
+    uid=accounts.current_uid.get()
+    if uid is None:
+        raise HTTPException(status_code=404,detail='Emails are only sent by the hosted service')
+    accounts.set_marketing(uid,r.opt_in,'extension')
+    return {'ok':True,'marketing_opt_in':r.opt_in}
+
+@app.get('/v1/unsubscribe')
+def unsubscribe_link(u:str='',t:str=''):
+    from fastapi.responses import HTMLResponse
+    ok=accounts.unsubscribe(u,t)
+    text='You will not get any more tips or news emails from Snapply.' if ok else 'This link is not valid. Email hello@snapply.co.uk and we will unsubscribe you.'
+    return HTMLResponse(f'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Snapply</title><body style="font-family:system-ui;max-width:520px;margin:15vh auto;padding:0 20px;text-align:center"><h1>Snapply</h1><p>{text}</p></body>')
 
 @app.get('/v1/me')
 def me():

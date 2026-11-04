@@ -299,6 +299,27 @@ def _reward_referral(uid: str, account: dict[str, Any]) -> None:
         pass
 
 
+def set_marketing(uid: str, opt_in: bool, source: str) -> None:
+    """Record the user's own choice about tips and news emails (UK PECR: opt-in, with the time and where it was given)."""
+    with _LOCK:
+        account = load_account(uid)
+        if not account:
+            return
+        account["marketing"] = {"opt_in": bool(opt_in), "at": datetime.now(timezone.utc).isoformat(), "source": source}
+        save_account(uid, account)
+
+
+def unsubscribe_token(uid: str) -> str:
+    return _b64(hmac.new(_secret(), f"unsubscribe:{uid}".encode(), hashlib.sha256).digest())[:32]
+
+
+def unsubscribe(uid: str, token: str) -> bool:
+    if not uid or not hmac.compare_digest(token or "", unsubscribe_token(uid)) or not load_account(uid):
+        return False
+    set_marketing(uid, False, "unsubscribe link")
+    return True
+
+
 def public_account(uid: str) -> dict[str, Any]:
     account = load_account(uid)
     plan = plan_of(account)
@@ -309,7 +330,8 @@ def public_account(uid: str) -> dict[str, Any]:
             "applications_limit": APPLICATION_LIMITS[plan], "subscription_status": account.get("subscription_status", ""),
             "pro_until": account.get("pro_until") if account.get("plan") != "pro" else None,
             "referral_code": referral_code(uid), "referral_rewards": int(account.get("referral_rewards", 0)),
-            "referred": bool(account.get("referred_by"))}
+            "referred": bool(account.get("referred_by")),
+            "marketing_opt_in": bool((account.get("marketing") or {}).get("opt_in"))}
 
 
 def consume_ai(uid: str | None, units: int = 1) -> None:

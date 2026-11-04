@@ -86,6 +86,19 @@ def main(argv: list[str]) -> int:
             print(e["email"], e.get("added_at", "")[:10])
         print(f"{len(entries)} on the waitlist")
         return 0
+    if len(argv) >= 2 and argv[1] in ("mailing-list", "no-cv-list"):
+        # mailing-list: people who ticked "email me tips"; no-cv-list: signed up but no CV yet (one service email only).
+        base = os.environ.get("SNAPPLY_API_BASE", "https://snapply-api.fly.dev")
+        rows = []
+        for uid, a in _all_accounts():
+            if argv[1] == "mailing-list" and not (a.get("marketing") or {}).get("opt_in"):
+                continue
+            if argv[1] == "no-cv-list" and (accounts.user_dir(uid) / "saved_cv.bin").exists():
+                continue
+            rows.append(f"{a.get('email', '')},{a.get('name', '')},{base}/v1/unsubscribe?u={uid}&t={accounts.unsubscribe_token(uid)}")
+        print("email,name,unsubscribe_url")
+        print("\n".join(rows))
+        return 0
     if len(argv) < 2 or argv[1] not in ("list", "grant-pro", "revoke-pro"):
         print(__doc__)
         return 2

@@ -18,9 +18,12 @@
       const code=document.createElement('input');code.placeholder='Invite code (optional)';code.maxLength=12;code.className='acct-code';
       const {snapplyRef}=await chrome.storage.local.get('snapplyRef');if(snapplyRef)code.value=snapplyRef;
       code.onchange=()=>chrome.storage.local.set({snapplyRef:code.value.trim().toUpperCase()});
+      const tips=document.createElement('label');tips.className='acct-tips';const tipsBox=document.createElement('input');tipsBox.type='checkbox';
+      tipsBox.checked=!!(await chrome.storage.local.get('marketingOptIn')).marketingOptIn;tipsBox.onchange=()=>chrome.storage.local.set({marketingOptIn:tipsBox.checked});
+      tips.append(tipsBox,' Email me job application tips and Snapply news (about twice a month, unsubscribe any time)');
       b.append(line('Sign in to use Snapply','acct-title'),
         line('Your CV and saved answers are kept in your account. Personal and legal answers and referees stay in this browser only.'),
-        button('Sign in with Google',async e=>{e.target.disabled=true;try{await API().signIn();render();window.dispatchEvent(new Event('snapply-signed-in'))}catch(err){b.append(line(err.message,'acct-status muted'));e.target.disabled=false}},'primary-small'),code);
+        button('Sign in with Google',async e=>{e.target.disabled=true;try{await API().signIn();if(tipsBox.checked){try{await API().post('/v1/me/marketing',{opt_in:true})}catch(_){}}await chrome.storage.local.remove('marketingOptIn');render();window.dispatchEvent(new Event('snapply-signed-in'))}catch(err){b.append(line(err.message,'acct-status muted'));e.target.disabled=false}},'primary-small'),tips,code);
       return;
     }
     let a;try{a=await API().account()}catch(e){b.append(line(e.message));return}
@@ -42,6 +45,9 @@
       ...(pro?[button('Manage subscription',()=>openTab('/v1/billing/portal'))]:plans.map(p=>button(planLabel(p),()=>openTab('/v1/billing/checkout',{interval:p.interval}),p.popular?'primary-small':''))),
       ...(a.pro_until?[line(`Free Pro until ${new Date(a.pro_until).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`)]:[]),
       invite,
+      (()=>{const l=document.createElement('label');l.className='acct-tips';const c=document.createElement('input');c.type='checkbox';c.checked=!!a.marketing_opt_in;
+        c.onchange=async()=>{try{await API().post('/v1/me/marketing',{opt_in:c.checked})}catch(_){c.checked=!c.checked}};
+        l.append(c,' Email me job application tips and Snapply news (about twice a month, unsubscribe any time)');return l})(),
       button('Sign out',async()=>{await API().signOut();render()}),
       button('Delete account',async e=>{
         // Two-step confirmation inside the panel (no browser dialogs): first click arms, second deletes.
