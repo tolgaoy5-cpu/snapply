@@ -3,11 +3,13 @@ Content is plain, accurate UK job-application advice; each guide ends with a sho
   python3 scripts/build_guides.py
 """
 import html
+import json
 from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent / 'site'
 BASE = 'https://snapply.co.uk'
 UPDATED = '4 November 2026'
+DATE_ISO = '2026-11-04'
 
 GUIDES = [
     ('nhs-supporting-statement', 'How to write an NHS supporting statement',
@@ -440,6 +442,9 @@ CTA = """<div class="cta-card"><b>Fill applications from your CV in one click</b
 
 
 def page(title, desc, body, path):
+    ld = '<script type="application/ld+json">' + json.dumps({"@context": "https://schema.org", "@type": "Article", "headline": title, "description": desc,
+        "dateModified": DATE_ISO, "inLanguage": "en-GB", "mainEntityOfPage": f"{BASE}/{path}", "image": f"{BASE}/img/fill.jpg",
+        "author": {"@type": "Organization", "name": "Snapply", "url": BASE}, "publisher": {"@type": "Organization", "name": "Snapply", "url": BASE}}, ensure_ascii=False) + '</script>'
     return f"""<!doctype html>
 <html lang="en-GB">
 <head>
@@ -454,6 +459,7 @@ def page(title, desc, body, path):
 <link rel="icon" href="/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
+{ld}
 </head>
 <body data-event="guide_visit">
 <header class="nav scrolled"><div class="wrap"><a class="brand" href="/"><img src="/logo.png" alt="">Snapply</a><nav class="links"><a href="/#how">How it works</a><a href="/#pricing">Pricing</a><a href="/guides/">Guides</a></nav><div class="actions"><a class="btn btn-dark btn-sm" href="https://chromewebstore.google.com/detail/snapply/pbciplmicohoeflmnjapakibfgbmjcmb" target="_blank" rel="noopener">Add to Chrome</a></div></div></header>
@@ -478,7 +484,11 @@ def main():
     (out / 'index.html').write_text(page('Job application guides', 'Practical advice for UK job applications: NHS and Civil Service applications, cover letters, competency questions, notice period, salary, references and more.', index, 'guides/'))
     urls = ['', 'guides/', *[f'guides/{s}' for s, *_ in GUIDES], 'privacy', 'terms']
     (SITE / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-                                      + ''.join(f'  <url><loc>{BASE}/{u}</loc></url>\n' for u in urls) + '</urlset>\n')
+                                      + ''.join(f'  <url><loc>{BASE}/{u}</loc><lastmod>{DATE_ISO}</lastmod></url>\n' for u in urls) + '</urlset>\n')
+    llms = ['# Snapply', '', '> Snapply is a Chrome extension for UK job seekers. It fills job application forms from your CV (personal details, work history, education, CV upload and saved answers such as notice period and right to work), drafts cover letters only from your real CV, and never submits for you. Works on Workday, Greenhouse, Lever, Ashby, Workable, Teamtailor, TalentLink, NHS Jobs and TRAC. Free for 5 applications a month; paid Pro plans for more.', '',
+            '- [Homepage](https://snapply.co.uk/): what Snapply does, pricing and FAQ', '- [Chrome Web Store](https://chromewebstore.google.com/detail/snapply/pbciplmicohoeflmnjapakibfgbmjcmb)', '- [Privacy policy](https://snapply.co.uk/privacy)', '', '## Guides', '']
+    llms += [f'- [{t}]({BASE}/guides/{sl}): {d}' for sl, t, d, _ in GUIDES]
+    (SITE / 'llms.txt').write_text('\n'.join(llms) + '\n')
     (SITE / 'robots.txt').write_text(f'User-agent: *\nAllow: /\nSitemap: {BASE}/sitemap.xml\n')
     print(f'{len(GUIDES)} guides, index, sitemap.xml, robots.txt')
 
