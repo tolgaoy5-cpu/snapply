@@ -7,7 +7,7 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent / 'site'
 BASE = 'https://snapply.co.uk'
-UPDATED = '23 October 2026'
+UPDATED = '4 November 2026'
 
 GUIDES = [
     ('nhs-supporting-statement', 'How to write an NHS supporting statement',
@@ -282,6 +282,139 @@ GUIDES = [
 <li>Make each “Why this firm?” answer specific (see <a href="why-do-you-want-this-job">our guide</a>).</li>
 <li>Keep a spreadsheet of deadlines, logins and stages — you may apply to dozens of schemes.</li>
 <li>Check if a scheme asks about visa sponsorship before applying, if it applies to you.</li>
+</ul>
+"""),
+    ('trac-job-applications', 'TRAC job applications: how to fill in the NHS TRAC form',
+     'A section-by-section guide to TRAC applications (apps.trac.jobs) used by many NHS trusts: employment history, education, references and supporting information.',
+     """
+<p>Many NHS trusts, and some other public bodies, use <b>TRAC</b> for recruitment. When you press “Apply” on an advert, you are often taken to an application form on <b>apps.trac.jobs</b>. It is long, but it follows the same pattern every time, so it gets quicker once you know it.</p>
+<h2>Before you start</h2>
+<ul>
+<li>Have your full work history to hand, with <b>month and year</b> start and end dates, employer addresses and a short list of duties for each job.</li>
+<li>List your qualifications with the institution, subject, grade and date.</li>
+<li>Ask two referees in advance, including your current or most recent line manager (see our <a href="job-references-uk">guide to references</a>).</li>
+<li>Read the person specification — the supporting information section is judged against it.</li>
+</ul>
+<h2>The main sections</h2>
+<ol>
+<li><b>Personal details and contact information.</b> Use an email address you check daily: interview invitations often arrive by email with short deadlines.</li>
+<li><b>Right to work and professional registration.</b> Answer the right to work questions exactly (see <a href="right-to-work-questions">our guide</a>). If the role needs registration (for example NMC or HCPC), have your PIN and expiry date ready.</li>
+<li><b>Employment history.</b> Your current or most recent job comes first, then previous jobs. Each one is a separate row with dates, employer, job title and duties. Explain gaps briefly — see <a href="employment-gaps">explaining gaps</a>.</li>
+<li><b>Education, qualifications and training.</b> One row per qualification. Include relevant short courses and mandatory training where the form asks for it.</li>
+<li><b>References.</b> Usually covering the last few years of employment or study.</li>
+<li><b>Supporting information.</b> This is where shortlisting is mostly decided. Address the person specification criterion by criterion — our <a href="nhs-supporting-statement">NHS supporting statement guide</a> shows how.</li>
+<li><b>Declarations and equality monitoring.</b> Read each declaration carefully. Equality questions are usually voluntary (see <a href="equality-monitoring-forms">equality monitoring</a>).</li>
+</ol>
+<h2>Tips that save time</h2>
+<ul>
+<li>Save each section as you go. Forms can time out, and you can come back to a saved draft.</li>
+<li>Write the supporting information in a document first, then paste it in.</li>
+<li>Your TRAC account keeps some details between applications, but check every section again — especially your current job and dates.</li>
+<li>Adverts can close early when a trust receives many applications, so do not leave it to the closing date.</li>
+</ul>
+"""),
+    ('nhs-jobs-application-form', 'NHS Jobs application form: a step-by-step guide',
+     'How to complete an application on NHS Jobs (jobs.nhs.uk): what each part asks for and how shortlisting works.',
+     """
+<p><b>NHS Jobs</b> (jobs.nhs.uk) is the main job site for NHS roles in England and Wales. Some adverts are completed on NHS Jobs itself; others send you to the trust’s own system, such as TRAC (see our <a href="trac-job-applications">TRAC guide</a>).</p>
+<h2>1. Read the job pack first</h2>
+<p>Download the job description and person specification. Note the <b>essential criteria</b> and which are assessed on the application form. That tells you what your answers must cover.</p>
+<h2>2. Work through the form</h2>
+<ul>
+<li><b>Personal details and eligibility:</b> contact details, right to work, and any registration the role needs.</li>
+<li><b>Employment history:</b> each job with dates, employer, title and main responsibilities. Most recent first.</li>
+<li><b>Education and training:</b> qualifications with dates and grades, and relevant training.</li>
+<li><b>References:</b> normally your current or most recent employer, covering a set number of years.</li>
+<li><b>Supporting information:</b> the most important part — evidence against the person specification. See <a href="nhs-supporting-statement">how to write it</a>.</li>
+<li><b>Declarations and equality monitoring.</b></li>
+</ul>
+<h2>3. How shortlisting usually works</h2>
+<p>Shortlisters normally score applications against the person specification. Clear evidence for each essential criterion matters more than length. Many trusts shortlist without seeing your personal details, so the evidence has to speak for itself.</p>
+<h2>4. Before you submit</h2>
+<ul>
+<li>Check dates line up and gaps are explained.</li>
+<li>Make sure the supporting information is tailored to this post, not copied from another.</li>
+<li>Check the closing date — some adverts close early.</li>
+</ul>
+"""),
+    ('autofill-job-applications', 'How to autofill job applications (and what to check before you submit)',
+     'The options for filling job application forms faster — browser autofill, extensions and saved answers — and the checks that stop mistakes.',
+     """
+<p>Most job application forms ask for the same things: contact details, work history, education, right to work, notice period and a CV upload. Filling them by hand for every application is slow, and retyping makes mistakes more likely.</p>
+<h2>Your options</h2>
+<ul>
+<li><b>Browser autofill</b> (Chrome, Safari, Edge) fills name, email, phone and address. It is free and built in, but it does not handle work history, education rows or application questions.</li>
+<li><b>A master document</b> you copy from. Free and reliable, but still manual.</li>
+<li><b>Job application autofill extensions.</b> These read your CV and fill the longer parts of the form — job history, education, upload fields and common questions. Check which application systems they support (for example Workday, Greenhouse, Lever, TRAC) and how they handle your data.</li>
+</ul>
+<h2>What to check, whatever you use</h2>
+<ol>
+<li><b>Dates:</b> start and end dates in the format the form wants, and your current job marked as current.</li>
+<li><b>Dropdowns:</b> degree level, country and phone type are easy to get wrong.</li>
+<li><b>The right file in the right slot:</b> CV in the CV upload, cover letter in the cover letter upload.</li>
+<li><b>Eligibility and legal questions:</b> right to work, sponsorship, criminal record and declarations should always be answered by you, carefully.</li>
+<li><b>Written answers:</b> anything that sounds generic should be rewritten for the role.</li>
+</ol>
+<h2>Privacy</h2>
+<p>Your CV contains personal data. Before using any tool, read where your data is stored, whether it is used to train AI models, and how to delete it.</p>
+<p class="fine">Snapply is one of these tools: it fills UK application forms from your CV and saved answers, never submits for you, and never fills equality or other sensitive questions on its own. You review every page.</p>
+"""),
+    ('ai-cover-letter-uk', 'Using AI to write a cover letter — without making things up',
+     'How to use AI for a UK cover letter safely: give it your real CV and the advert, then check every claim.',
+     """
+<p>AI tools can draft a cover letter in seconds. The risk is that they <b>invent things</b>: a team you never led, a qualification you do not have, numbers that sound impressive but are not yours. Recruiters notice, and it can come up at interview.</p>
+<h2>A safer way to use AI</h2>
+<ol>
+<li><b>Give it your real CV and the job advert.</b> Ask it to use only experience that appears in your CV.</li>
+<li><b>Ask for the advert’s top two or three requirements</b> to be matched with real examples — the structure in our <a href="uk-cover-letter">UK cover letter guide</a>.</li>
+<li><b>Check every sentence against your CV.</b> Delete anything you cannot back up with a real example.</li>
+<li><b>Make the opening and “why this employer” part yours.</b> These are the lines that sound most generic when AI writes them.</li>
+<li><b>Keep it under one page</b> and save it as a PDF if the form asks for an upload.</li>
+</ol>
+<h2>Red flags to remove</h2>
+<ul>
+<li>Numbers or percentages you did not give it.</li>
+<li>Job titles, employers or qualifications not in your CV.</li>
+<li>Phrases like “I am thrilled to apply” or “dynamic, results-driven professional”.</li>
+</ul>
+<p class="fine">Snapply drafts cover letters only from your CV and the advert, checks each sentence against your CV and removes anything it cannot back up. You still read and edit it before attaching.</p>
+"""),
+    ('employment-history-application-form', 'How to fill in employment history on a job application form',
+     'Dates, job titles, duties, gaps and reasons for leaving: how to complete the employment history section on UK application forms.',
+     """
+<p>The employment history section looks simple, but it is where many forms ask for the most detail — and where inconsistencies with your CV are spotted.</p>
+<h2>What each row usually needs</h2>
+<ul>
+<li><b>Employer name and address.</b> Use the legal or commonly used name, and the address of the site you worked at.</li>
+<li><b>Job title</b> exactly as it was.</li>
+<li><b>Start and end dates</b> — usually month and year. For your current job, tick “current” or enter “present”.</li>
+<li><b>Main duties.</b> Three to six short points, focused on what the new role cares about.</li>
+<li><b>Reason for leaving</b> — keep it short and neutral (see <a href="reason-for-leaving">our guide</a>).</li>
+<li><b>Notice period</b> for your current job (see <a href="notice-period-question">notice period</a>).</li>
+</ul>
+<h2>Order and gaps</h2>
+<p>Most forms want your current or most recent job first. Many public sector forms ask you to account for every gap over a few months — a short line such as “travelling” or “caring for a family member” is enough (see <a href="employment-gaps">explaining gaps</a>).</p>
+<h2>Keep it consistent with your CV</h2>
+<p>Dates and titles on the form should match your CV and what your references will confirm. Keeping one accurate master list of your jobs makes every application faster and avoids contradictions.</p>
+"""),
+    ('startup-job-applications-greenhouse-lever', 'Applying through Greenhouse, Lever and Ashby: tips for tech and startup jobs',
+     'What to expect on Greenhouse, Lever, Ashby and Workable application forms used by many UK tech companies and startups.',
+     """
+<p>Many UK tech companies and startups use application systems such as <b>Greenhouse</b>, <b>Lever</b>, <b>Ashby</b> and <b>Workable</b>. Their forms are shorter than NHS or Civil Service forms, but they have their own quirks.</p>
+<h2>What these forms usually ask</h2>
+<ul>
+<li>Name, email, phone (often with a separate country code), location and LinkedIn URL.</li>
+<li>A <b>CV upload</b> — and sometimes a separate cover letter upload or text box.</li>
+<li>Short custom questions: right to work, sponsorship, notice period, salary expectations, “How did you hear about us?”.</li>
+<li>Sometimes one longer question, such as “Why do you want to join us?” (see <a href="why-do-you-want-this-job">our guide</a>).</li>
+<li>An optional equality or demographic survey.</li>
+</ul>
+<h2>Tips</h2>
+<ul>
+<li>Your CV does most of the work here, so tailor its top third to the role.</li>
+<li>Check dropdowns such as phone country and location, which are easy to mis-set.</li>
+<li>Keep your answers to the common questions (right to work, notice period, salary range) consistent across applications.</li>
+<li>If there is a cover letter box, a short, specific note beats a generic page.</li>
 </ul>
 """),
     ('apply-for-jobs-faster', 'How to apply for more jobs in less time',
