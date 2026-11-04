@@ -25,6 +25,7 @@ import letter_writer
 import field_classifier
 import rate_limit
 import analytics
+import mailer
 import re
 
 app=FastAPI(title='Snapply Core API',version='0.27.0')
@@ -36,6 +37,7 @@ PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist','
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
+    mailer.maybe_sweep()
     if not origin_allowed(request.headers.get('origin')):
         return JSONResponse(status_code=403,content={'detail':'Origin is not allowed on this API.'})
     if accounts.cloud_mode() and request.url.path not in PUBLIC_PATHS and request.method!='OPTIONS':
