@@ -8,8 +8,8 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent / 'site'
 BASE = 'https://snapply.co.uk'
-UPDATED = '4 November 2026'
-DATE_ISO = '2026-11-04'
+UPDATED = '5 November 2026'
+DATE_ISO = '2026-11-05'
 
 GUIDES = [
     ('nhs-supporting-statement', 'How to write an NHS supporting statement',
@@ -417,6 +417,84 @@ GUIDES = [
 <li>Check dropdowns such as phone country and location, which are easy to mis-set.</li>
 <li>Keep your answers to the common questions (right to work, notice period, salary range) consistent across applications.</li>
 <li>If there is a cover letter box, a short, specific note beats a generic page.</li>
+</ul>
+"""),
+    ('autofill-nhs-jobs-trac', 'Is there an autofill for NHS Jobs and TRAC applications?',
+     'Yes: Snapply is a Chrome extension that fills NHS Jobs and TRAC application forms from your CV — personal details, employment history, education and saved answers. You check each section and submit yourself.',
+     """
+<p><b>Short answer: yes.</b> <a href="/?utm_source=guide">Snapply</a> is a free Chrome extension that fills NHS application forms on <b>NHS Jobs</b> and <b>TRAC</b> (apps.trac.jobs) from your CV.</p>
+<h2>What it fills</h2>
+<ul>
+<li>Personal and contact details</li>
+<li><b>Employment history</b> — each job as its own row, with start and end dates in the format the form accepts, and your current job marked as current</li>
+<li><b>Education and qualifications</b> — one row per qualification, with institution, subject, grade and date</li>
+<li>Training and certificates from your CV</li>
+<li>Questions you have answered before, such as notice period or right to work (legal questions are only suggested — you confirm them)</li>
+</ul>
+<h2>What it does not do</h2>
+<ul>
+<li>It never presses submit — you check every section first.</li>
+<li>It never fills equality monitoring, disability or other personal questions on its own.</li>
+<li>It never puts your details into referee or employer contact fields.</li>
+</ul>
+<h2>How to use it</h2>
+<ol>
+<li>Add Snapply to Chrome and upload your CV once.</li>
+<li>Open the TRAC or NHS Jobs application and go to a section, for example Employment history.</li>
+<li>Press <b>“Fill this page”</b> in the Snapply panel, check the rows, then press the site’s own Save and Continue.</li>
+</ol>
+<p>The supporting information box is still best written by you against the person specification — see our <a href="nhs-supporting-statement">NHS supporting statement guide</a>. Snapply can draft it only from your real CV, and you edit it before using it.</p>
+<p>More on the forms themselves: <a href="trac-job-applications">TRAC applications</a> and <a href="nhs-jobs-application-form">NHS Jobs application form</a>.</p>
+"""),
+    ('autofill-workday-applications', 'How to autofill Workday job applications',
+     'Workday asks for your whole CV again on every employer’s site. Snapply fills My Information and My Experience — every job, education entry and date — from your CV in one click.',
+     """
+<p>Workday is used by many large UK employers, and each one has its own careers site and account. The slow part is <b>My Experience</b>, where every job and qualification has to be typed into separate boxes with dates.</p>
+<h2>Options</h2>
+<ul>
+<li><b>Workday’s own CV upload</b> pre-fills some fields, but it often misses or mixes up jobs and dates, so you still check every entry.</li>
+<li><b>Browser autofill</b> fills name, email and phone, but not the experience or education rows.</li>
+<li><b>Snapply</b> (Chrome extension) fills My Information and the whole My Experience page — every job and education entry, with dates Workday accepts — and attaches your CV. Questions you answered before are filled from your saved answers.</li>
+</ul>
+<h2>Using Snapply on Workday</h2>
+<ol>
+<li>Upload your CV to Snapply once.</li>
+<li>On each Workday step press <b>“Fill this page”</b>, check the page, then press Workday’s <b>Save and Continue</b>.</li>
+<li>On Application Questions, answer anything new once in the Snapply panel — it is remembered for the next employer.</li>
+</ol>
+<p>Snapply never submits the application and never fills the Voluntary Disclosures or Self Identify pages for you. See also our <a href="workday-job-applications">Workday guide</a>.</p>
+"""),
+    ('simplify-alternative-uk', 'A Simplify alternative for UK job applications',
+     'Looking for a job application autofill extension that works on UK forms such as NHS Jobs, TRAC, Workday and council sites? Here is how Snapply compares and when it fits.',
+     """
+<p>Several Chrome extensions fill job applications from your CV — Simplify is one of the best known. If you are applying in the <b>UK</b>, the forms you meet are often different: NHS Jobs and TRAC, council and university systems, Workday sites of UK employers, and small employers’ own forms.</p>
+<h2>What Snapply is built for</h2>
+<ul>
+<li><b>UK forms:</b> NHS Jobs and TRAC employment and education rows, Workday, Greenhouse, Lever, Ashby, Workable, Teamtailor and TalentLink, plus unfamiliar forms where it recognises the fields it can.</li>
+<li><b>UK questions:</b> right to work, sponsorship, notice period, salary range — answered once and reused, with legal answers always confirmed by you.</li>
+<li><b>Honest AI:</b> cover letters and supporting statements written only from your real CV; anything it cannot back up is cut.</li>
+<li><b>Privacy:</b> equality, disability and legal answers and referee details stay in your browser.</li>
+<li><b>You stay in control:</b> it never presses submit.</li>
+</ul>
+<h2>Price</h2>
+<p>Snapply is free for 5 applications a month. Pro plans add unlimited applications and cover letters.</p>
+<p>Whichever tool you use, check every page before submitting — see <a href="autofill-job-applications">how to autofill job applications safely</a>.</p>
+"""),
+    ('best-way-to-fill-job-applications-uk', 'The fastest way to fill in job applications in the UK',
+     'A practical comparison of the ways to stop retyping your CV into every UK application form: browser autofill, a master document and job application autofill extensions.',
+     """
+<p>UK job seekers often fill in dozens of application forms, each asking for the same details, work history and questions. These are the main ways to speed that up, from simplest to most automatic.</p>
+<h2>1. Browser autofill (free, built in)</h2>
+<p>Fills name, email, phone and address. Does not fill work history, education, uploads or questions.</p>
+<h2>2. A master document (free)</h2>
+<p>One document with every job’s dates and duties, qualifications, referees and your standard answers. Reliable, but you still copy and paste every field.</p>
+<h2>3. A job application autofill extension</h2>
+<p>Reads your CV and fills the long parts of the form. <a href="/?utm_source=guide">Snapply</a> is one built for UK forms: it fills contact details, every job and qualification row (NHS Jobs, TRAC, Workday and more), attaches your CV and reuses answers you gave before. It never submits for you and never fills equality or legal questions on its own. Free for 5 applications a month.</p>
+<h2>What still needs you</h2>
+<ul>
+<li>Tailoring the supporting statement or cover letter to the advert (<a href="uk-cover-letter">cover letter guide</a>).</li>
+<li>Eligibility and legal declarations.</li>
+<li>A final check of every page before you submit.</li>
 </ul>
 """),
     ('apply-for-jobs-faster', 'How to apply for more jobs in less time',
