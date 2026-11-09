@@ -20,7 +20,8 @@
   const event=name=>{const body=JSON.stringify({name,source:store.get('snapply_source')||source});
     try{if(navigator.sendBeacon&&navigator.sendBeacon(API+'/v1/events',new Blob([body],{type:'text/plain'})))return}catch(_){}
     try{fetch(API+'/v1/events',{method:'POST',headers:{'Content-Type':'text/plain'},body,keepalive:true}).catch(()=>{})}catch(_){}};
-  if(!document.body.dataset.noVisit)event(document.body.dataset.event||'site_visit');
+  // ?dev=1: a development/test install of the extension opened the welcome page; not a real install.
+  if(!document.body.dataset.noVisit&&!params.get('dev'))event(document.body.dataset.event||'site_visit');
   if(store.get('snapply_ref')){
     const bar=document.createElement('div');bar.className='refbar';
     bar.textContent='A friend invited you: you both get 15 days of Snapply Pro free after your first application.';
