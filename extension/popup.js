@@ -99,14 +99,17 @@ async function refreshSavedCVState(){
   }catch(e){el.textContent=/sign in|connection/i.test(e?.message||'')?e.message:'Saved CV status unavailable. Reopen this panel; do not re-import the CV.';}
 }
 
-async function importCVFile(f){forgetServerState();if(!f)throw new Error('Choose a CV file first.');byId('summary').textContent='Importing and saving CV…';const d=await window.JobCopilotAPI.uploadCV(f);await chrome.storage.local.set({masterProfile:d.profile});const saved=await window.JobCopilotSavedCV.saveLocal(f);await refreshProfileState();byId('summary').textContent=(d.review_required?'CV imported · review unresolved items':'CV imported successfully')+` · saved ${saved.name}`;show({...d,saved_cv:{name:saved.name,size:saved.size,type:saved.type}});return d}
+async function importCVFile(f){forgetServerState();if(!f)throw new Error('Choose a CV file first.');
+  // No account yet: start a guest session so the CV can be read and one application filled.
+  if(await window.JobCopilotAPI.isCloud()&&!await window.JobCopilotAPI.session()){await window.JobCopilotAPI.guestSignIn();window.SnapplyAccount?.render()}
+  byId('summary').textContent='Importing and saving CV…';const d=await window.JobCopilotAPI.uploadCV(f);await chrome.storage.local.set({masterProfile:d.profile});const saved=await window.JobCopilotSavedCV.saveLocal(f);await refreshProfileState();byId('summary').textContent=(d.review_required?'CV imported · review unresolved items':'CV imported successfully')+` · saved ${saved.name}`;show({...d,saved_cv:{name:saved.name,size:saved.size,type:saved.type}});return d}
 byId('importCV').onclick=async()=>{try{await importCVFile(byId('cvFile').files?.[0])}catch(e){show({error:e.message})}};
 // First run: a big "Upload your CV" step until there is a profile (new users otherwise stop after signing in).
 byId('onboardFile')?.addEventListener('change',async e=>{const st=byId('onboardState');try{st.className='muted';st.textContent='Reading your CV…';justOnboarded=true;const d=await importCVFile(e.target.files?.[0]);const box=byId('onboard');box.querySelector('.ob-step').textContent='Step 2 of 2';box.querySelector('h2').textContent='Now open a job application';box.querySelector('.ob-pick').hidden=true;box.querySelector('p').hidden=true;st.className='done';st.textContent=`Done: ${(d.profile?.experience||[]).length} jobs and ${(d.profile?.education||[]).length} qualifications found. Check them under My Profile → Edit profile.`}catch(err){justOnboarded=false;st.className='block';st.textContent=err.message}finally{e.target.value=''}});
 let justOnboarded=false;
 async function refreshOnboarding(p){const box=byId('onboard');if(!box)return;
-  let signedOut=false;try{signedOut=await window.JobCopilotAPI.isCloud()&&!(await window.JobCopilotAPI.session())}catch(_){}
-  box.hidden=(!!p?.full_name&&!justOnboarded)||signedOut;
+  // Shown signed out too: a CV can be tried without an account (guest session).
+  box.hidden=!!p?.full_name&&!justOnboarded;
   if(!box.hidden&&!p?.full_name)byId('summary').textContent='Welcome! Start by uploading your CV below.';}
 window.addEventListener('snapply-signed-in',()=>refreshProfileState().catch(()=>{}));
 
@@ -826,7 +829,7 @@ async function allowApplication(){
     return true;
   }catch(e){
     const s=byId('summary');
-    s.textContent=e.status===402?`${e.message} Open the Snapply account card above to upgrade.`:`Could not check your plan: ${e.message}`;
+    s.textContent=e.status===402?(await window.JobCopilotAPI.isGuest()?`${e.message} Use “Sign in with Google” at the top.`:`${e.message} Open the Snapply account card above to upgrade.`):`Could not check your plan: ${e.message}`;
     s.scrollIntoView({behavior:'smooth',block:'center'});
     return false;
   }

@@ -46,7 +46,7 @@
     const headers={...(opts.headers||{})};
     const token=await session(); if(token)headers.Authorization='Bearer '+token;
     const r=await fetch((await base())+path,{...opts,headers});
-    if(r.status===401&&token){await chrome.storage.local.remove('snapplySession');window.dispatchEvent(new Event('snapply-signed-out'))}
+    if(r.status===401&&token){await chrome.storage.local.remove(['snapplySession','snapplyGuest']);window.dispatchEvent(new Event('snapply-signed-out'))}
     return r;
   }
   async function request(path,opts){
@@ -75,12 +75,32 @@
     const idToken=new URLSearchParams(new URL(redirect).hash.slice(1)).get('id_token');
     if(!idToken)throw new Error('Google sign-in was cancelled.');
     const {snapplyRef}=await chrome.storage.local.get('snapplyRef');
-    const d=await post('/v1/auth/google',{id_token:idToken,ref:snapplyRef||''});
-    await chrome.storage.local.set({snapplySession:d.session});await chrome.storage.local.remove('snapplyRef');
+    const guest=await isGuest(), guestToken=guest?await session():'', guestUid=guest?await uid():'';
+    const d=await post('/v1/auth/google',{id_token:idToken,ref:snapplyRef||'',guest_session:guestToken});
+    await chrome.storage.local.set({snapplySession:d.session});await chrome.storage.local.remove(['snapplyRef','snapplyGuest']);
+    // The server moved the guest's CV and answers into the account; move the browser-only ones too.
+    if(guestUid){const newUid=await uid();
+      for(const name of ['browserAnswers','browserReferees','documentLibrary']){
+        const from=`${name}:${guestUid}`,to=`${name}:${newUid}`;const x=await chrome.storage.local.get([from,to]);
+        if(x[from]!==undefined&&x[to]===undefined)await chrome.storage.local.set({[to]:x[from]});
+        await chrome.storage.local.remove(from);
+      }
+      // Keep the cached profile: it is the same data, now in the account.
+      await chrome.storage.local.set({cacheScope:(await base())+'|'+newUid});
+    }
     await ensureScope();
     return d.account;
   }
-  async function signOut(){await chrome.storage.local.remove('snapplySession');await ensureScope()}
+  // Try Snapply without an account: a guest session good for importing a CV and filling one application.
+  async function guestSignIn(){
+    if(await session())return;
+    const r=await fetch((await base())+'/v1/auth/guest',{method:'POST'});
+    if(!r.ok){let detail='';try{detail=(await r.json()).detail}catch(_){}throw new Error(detail||'Please sign in with Google to use Snapply.')}
+    const d=await r.json();
+    await chrome.storage.local.set({snapplySession:d.session,snapplyGuest:true});await ensureScope();
+  }
+  async function isGuest(){return !!(await chrome.storage.local.get('snapplyGuest')).snapplyGuest&&!!(await session())}
+  async function signOut(){await chrome.storage.local.remove(['snapplySession','snapplyGuest']);await ensureScope()}
   async function account(){return (await get('/v1/me')).account}
-  window.JobCopilotAPI={get,post,del,raw,base,setBase,mode,isCloud,session,uid,ensureScope,accountKey,uploadCV,signIn,signOut,account,LOCAL,CLOUD};
+  window.JobCopilotAPI={get,post,del,raw,base,setBase,mode,isCloud,session,uid,ensureScope,accountKey,uploadCV,signIn,guestSignIn,isGuest,signOut,account,LOCAL,CLOUD};
 })();

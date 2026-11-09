@@ -5,7 +5,9 @@ const html=fs.readFileSync(__dirname+'/../extension/popup.html','utf8');
 const js=fs.readFileSync(__dirname+'/../extension/popup.js','utf8');
 assert.ok(/<section id="onboard"[^>]*hidden/.test(html)&&html.indexOf('id="onboard"')<html.indexOf('<h2>My Profile</h2>'),'the onboarding step sits above My Profile');
 assert.ok(/id="onboardFile" type="file"/.test(html)&&/for="onboardFile"/.test(html),'one big button chooses the CV');
-assert.ok(/await refreshOnboarding\(p\)/.test(js)&&/box\.hidden=\(!!p\?\.full_name&&!justOnboarded\)\|\|signedOut/.test(js),'shown only without a profile, and not before signing in');
+// Signed out too (Nov 2026): a CV can be tried without an account, via a guest session.
+assert.ok(/await refreshOnboarding\(p\)/.test(js)&&/box\.hidden=!!p\?\.full_name&&!justOnboarded;/.test(js),'shown whenever there is no profile, signed in or not');
+assert.ok(/isCloud\(\)&&!await window\.JobCopilotAPI\.session\(\)\)\{await window\.JobCopilotAPI\.guestSignIn\(\)/.test(js),'choosing a CV without an account starts a guest session first');
 assert.ok(/Step 2 of 2/.test(js),'after the upload it points to the next step');
 const server=fs.readFileSync(__dirname+'/../backend/server.py','utf8');
 assert.ok(/analytics\.record\('cv_imported'\)/.test(server)&&/analytics\.record\('cv_import_failed'\)/.test(server),'CV imports are counted');

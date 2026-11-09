@@ -25,7 +25,9 @@ def _all_accounts() -> list[tuple[str, dict]]:
     found = []
     for path in sorted(root.glob("*/account.json")) if root.exists() else []:
         try:
-            found.append((path.parent.name, json.loads(path.read_text())))
+            account = json.loads(path.read_text())
+            if not account.get("guest"):  # no-account trials are not customers
+                found.append((path.parent.name, account))
         except (OSError, json.JSONDecodeError):
             continue
     return found
@@ -46,7 +48,7 @@ def main(argv: list[str]) -> int:
         import analytics
         days = int(argv[2]) if len(argv) > 2 else 30
         totals = analytics.summary(days)
-        order = ["site_visit", "add_to_chrome_click", "welcome_page", "signup", "cv_imported", "cv_import_failed", "get_pro_click", "checkout_started", "pro_converted", "referral_rewarded", "waitlist_join"]
+        order = ["site_visit", "add_to_chrome_click", "welcome_page", "guest_start", "guest_converted", "signup", "cv_imported", "cv_import_failed", "get_pro_click", "checkout_started", "pro_converted", "referral_rewarded", "waitlist_join"]
         print(f"Last {days} days")
         for name in order + sorted(set(totals) - set(order)):
             by = totals.get(name, {})

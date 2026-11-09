@@ -14,15 +14,17 @@
     const m=await API().mode();
     if(m.auth!=='google'){b.hidden=true;return}
     b.hidden=false;
-    if(!await API().session()){
+    if(!await API().session()||await API().isGuest()){
+      const guest=await API().isGuest();
       const code=document.createElement('input');code.placeholder='Invite code (optional)';code.maxLength=12;code.className='acct-code';
       const {snapplyRef}=await chrome.storage.local.get('snapplyRef');if(snapplyRef)code.value=snapplyRef;
       code.onchange=()=>chrome.storage.local.set({snapplyRef:code.value.trim().toUpperCase()});
       const tips=document.createElement('label');tips.className='acct-tips';const tipsBox=document.createElement('input');tipsBox.type='checkbox';
       tipsBox.checked=!!(await chrome.storage.local.get('marketingOptIn')).marketingOptIn;tipsBox.onchange=()=>chrome.storage.local.set({marketingOptIn:tipsBox.checked});
       tips.append(tipsBox,' Email me job application tips and Snapply news (about twice a month, unsubscribe any time)');
-      b.append(line('Sign in to use Snapply','acct-title'),
-        line('Your CV and saved answers are kept in your account. Personal and legal answers and referees stay in this browser only.'),
+      b.append(line(guest?'Trying Snapply · 1 free application':'Try Snapply free · no account needed','acct-title'),
+        line(guest?'Sign in with Google (free) to keep going: 5 applications a month, and the CV and answers you added stay with you.'
+          :'Upload your CV below and fill one application. Sign in with Google (free) any time for 5 applications a month.'),
         button('Sign in with Google',async e=>{e.target.disabled=true;try{await API().signIn();if(tipsBox.checked){try{await API().post('/v1/me/marketing',{opt_in:true})}catch(_){}}await chrome.storage.local.remove('marketingOptIn');render();window.dispatchEvent(new Event('snapply-signed-in'))}catch(err){b.append(line(err.message,'acct-status muted'));e.target.disabled=false}},'primary-small'),tips,code);
       return;
     }

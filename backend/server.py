@@ -33,7 +33,7 @@ app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_OR
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
 
 # Routes that work without a session in cloud mode.
-PUBLIC_PATHS={'/health','/v1/auth/google','/v1/billing/webhook','/v1/waitlist','/v1/events','/v1/unsubscribe'}
+PUBLIC_PATHS={'/health','/v1/auth/google','/v1/auth/guest','/v1/billing/webhook','/v1/waitlist','/v1/events','/v1/unsubscribe'}
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
@@ -342,13 +342,23 @@ def health():
 class GoogleSignIn(BaseModel):
     id_token:str=Field(min_length=20,max_length=8000)
     ref:str=Field(default='',max_length=20)
+    guest_session:str=Field(default='',max_length=400)
+
+@app.post('/v1/auth/guest')
+def auth_guest():
+    # Try Snapply without an account: CV import and one application (rate limited per address).
+    if not accounts.cloud_mode():
+        raise HTTPException(status_code=404,detail='Guest sessions are only used by the hosted service')
+    token,account=accounts.guest_sign_in()
+    analytics.record('guest_start')
+    return {'ok':True,'session':token,'account':account}
 
 @app.post('/v1/auth/google')
 def auth_google(r:GoogleSignIn):
     if not accounts.cloud_mode():
         raise HTTPException(status_code=404,detail='Sign-in is only used by the hosted service')
     try:
-        token,account=accounts.sign_in(accounts.verify_google_id_token(r.id_token),ref=r.ref or None)
+        token,account=accounts.sign_in(accounts.verify_google_id_token(r.id_token),ref=r.ref or None,guest_session=r.guest_session)
     except accounts.AuthError as e:
         raise HTTPException(status_code=401,detail=str(e))
     return {'ok':True,'session':token,'account':account}

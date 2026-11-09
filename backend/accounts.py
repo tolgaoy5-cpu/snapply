@@ -29,6 +29,7 @@ current_uid: contextvars.ContextVar[str | None] = contextvars.ContextVar("curren
 SESSION_DAYS = 30
 PLANS = {
     # AI drafts (answers + cover letters) per calendar month.
+    "guest": 1,
     "free": int(os.environ.get("SNAPPLY_FREE_AI_PER_MONTH", "3")),
     "pro": int(os.environ.get("SNAPPLY_PRO_AI_PER_MONTH", "300")),
 }
@@ -155,7 +156,69 @@ def save_account(uid: str, account: dict[str, Any]) -> dict[str, Any]:
         return account
 
 
-def sign_in(google: dict[str, str], ref: str | None = None) -> tuple[str, dict[str, Any]]:
+GUEST_LIMIT_MESSAGE = ("That was your free try. Sign in with Google to keep going: it's free, gives you "
+                       "5 applications a month and keeps the CV and answers you've already added.")
+GUEST_DAYS = 30
+
+
+def guest_sign_in() -> tuple[str, dict[str, Any]]:
+    """A no-account session for trying Snapply: CV import and one application, nothing else to sign up for."""
+    import secrets
+    uid = secrets.token_hex(16)
+    with _LOCK:
+        save_account(uid, {"guest": True, "created_at": datetime.now(timezone.utc).isoformat()})
+    return issue_session(uid), public_account(uid)
+
+
+def merge_guest(guest_uid: str, uid: str) -> bool:
+    """Move what a guest added (CV, profile, saved answers, usage) into the account they signed in to.
+
+    Only fills gaps: an existing account that already has a CV keeps its own data.
+    """
+    import shutil
+    if not guest_uid or guest_uid == uid:
+        return False
+    with _LOCK:
+        guest = load_account(guest_uid)
+        if not guest.get("guest"):
+            return False
+        src, dst = user_dir(guest_uid), user_dir(uid)
+        if not (dst / "saved_cv.bin").exists():
+            for item in src.iterdir() if src.exists() else []:
+                if item.name != "account.json" and not (dst / item.name).exists():
+                    shutil.move(str(item), str(dst / item.name))
+        account = load_account(uid)
+        usage = account.setdefault("application_usage", {})
+        for month, keys in (guest.get("application_usage") or {}).items():
+            seen = usage.setdefault(month, [])
+            seen.extend(k for k in keys if k not in seen)
+        save_account(uid, account)
+        shutil.rmtree(src, ignore_errors=True)
+    return True
+
+
+def purge_guests(now: datetime | None = None) -> int:
+    """Delete guest data that was never turned into an account (after GUEST_DAYS)."""
+    from datetime import timedelta
+    import shutil
+    now = now or datetime.now(timezone.utc)
+    removed = 0
+    root = data_root() / "users"
+    for d in root.iterdir() if root.exists() else []:
+        account = load_account(d.name)
+        if not account.get("guest"):
+            continue
+        try:
+            created = datetime.fromisoformat(account.get("created_at", ""))
+        except ValueError:
+            continue
+        if now - created > timedelta(days=GUEST_DAYS):
+            shutil.rmtree(d, ignore_errors=True)
+            removed += 1
+    return removed
+
+
+def sign_in(google: dict[str, str], ref: str | None = None, guest_session: str = "") -> tuple[str, dict[str, Any]]:
     uid = user_id_for(google["sub"])
     with _LOCK:
         account = load_account(uid)
@@ -174,6 +237,13 @@ def sign_in(google: dict[str, str], ref: str | None = None) -> tuple[str, dict[s
         account.setdefault("created_at", now)
         account.setdefault("plan", "free")
         save_account(uid, account)
+        if guest_session:
+            try:
+                if merge_guest(verify_session(guest_session), uid):
+                    import analytics
+                    analytics.record("guest_converted")
+            except Exception:
+                pass
     return issue_session(uid), public_account(uid)
 
 
@@ -183,6 +253,8 @@ def _month() -> str:
 
 # Applications filled per calendar month (None = unlimited).
 APPLICATION_LIMITS: dict[str, int | None] = {
+    # Trying Snapply before signing in: one application, then sign in with Google to keep going.
+    "guest": 1,
     "free": int(os.environ.get("SNAPPLY_FREE_APPLICATIONS_PER_MONTH", "5")),
     "pro": None,
 }
@@ -225,6 +297,8 @@ def record_application(uid: str | None, url: str) -> dict[str, Any]:
         limit = APPLICATION_LIMITS[plan_of(account)]
         new = key not in seen
         if new and limit is not None and len(seen) >= limit:
+            if plan_of(account) == "guest":
+                raise QuotaError(GUEST_LIMIT_MESSAGE)
             raise QuotaError(f"You have used your {limit} free applications this month. "
                              "Upgrade to Pro for unlimited applications.")
         if new:
@@ -237,6 +311,8 @@ def record_application(uid: str | None, url: str) -> dict[str, Any]:
 
 
 def plan_of(account: dict[str, Any]) -> str:
+    if account.get("guest"):
+        return "guest"
     plan = account.get("plan")
     if plan == "pro":
         return "pro"
@@ -330,7 +406,7 @@ def public_account(uid: str) -> dict[str, Any]:
             "applications_limit": APPLICATION_LIMITS[plan], "subscription_status": account.get("subscription_status", ""),
             "pro_until": account.get("pro_until") if account.get("plan") != "pro" else None,
             "referral_code": referral_code(uid), "referral_rewards": int(account.get("referral_rewards", 0)),
-            "referred": bool(account.get("referred_by")),
+            "referred": bool(account.get("referred_by")), "guest": bool(account.get("guest")),
             "marketing_opt_in": bool((account.get("marketing") or {}).get("opt_in"))}
 
 
@@ -345,6 +421,8 @@ def consume_ai(uid: str | None, units: int = 1) -> None:
         used = int(usage.get(month, 0))
         limit = PLANS[plan_of(account)]
         if used + units > limit:
+            if plan_of(account) == "guest":
+                raise QuotaError(GUEST_LIMIT_MESSAGE)
             raise QuotaError(f"You have used your {limit} AI drafts for this month."
                              + (" Upgrade to Pro for more." if plan_of(account) == "free" else ""))
         usage[month] = used + units

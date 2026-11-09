@@ -12,6 +12,7 @@ from threading import Lock
 # path prefix -> (max requests, window seconds, keyed by 'user' or 'ip')
 RULES: list[tuple[str, int, int, str]] = [
     ("/v1/auth/google", 20, 3600, "ip"),
+    ("/v1/auth/guest", 5, 86400, "ip"),
     ("/v1/waitlist", 5, 3600, "ip"),
     ("/v1/events", 120, 3600, "ip"),
     ("/v1/fields/classify", 30, 3600, "user"),

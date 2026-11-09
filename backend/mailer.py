@@ -92,6 +92,10 @@ def due_for_reminder(uid: str, account: dict, now: datetime) -> bool:
 
 def sweep(now: datetime | None = None) -> int:
     """Send any setup reminders that are due; returns how many were sent."""
+    try:
+        accounts.purge_guests()
+    except Exception:
+        pass
     if not configured():
         return 0
     now = now or datetime.now(timezone.utc)
