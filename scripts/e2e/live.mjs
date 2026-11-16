@@ -97,7 +97,7 @@ const FRAME_STATS = `(()=>{
   // Upload widgets (Dropzone and others) take the file and swap in an empty input; the file name on the page shows it arrived.
   return {url:location.href,fields,cvShown:(document.body?.innerText||'').includes('Sam-Taylor-CV')};
 })()`;
-const BASIC = /\b(first|last|given|family|sur|full)\s*-?name\b|^name\b|e-?mail|phone|mobile|telephone|post\s*code|zip/i;
+const BASIC = /\b(first|last|given|family|sur|full)\s*-?name\b|^name\b|e-?mail|\bphone\b|mobile|telephone|post\s*code|zip/i;
 const SECONDARY = /home|work|other|alternative|secondary|evening|day\s*time|landline|confirm|re-?enter|verify|referee|reference|emergency|next of kin/i;
 
 async function checkSite(cdp, url) {
@@ -167,7 +167,7 @@ async function checkSite(cdp, url) {
   res.fields = all.length;
   res.filled = all.filter(f => f.filled).length;
   res.login = all.some(f => f.kind === 'password') || LOGIN_HOSTS.test(res.final || url);
-  res.missedBasics = all.filter(f => f.kind === 'text' && !f.filled && f.label.length <= 60 && BASIC.test(f.label) && !SECONDARY.test(f.label))  // long labels are questions ("Have you added your full legal name…?").map(f => f.label);
+  res.missedBasics = all.filter(f => f.kind === 'text' && !f.filled && f.label.length <= 60 && BASIC.test(f.label) && !SECONDARY.test(f.label)).map(f => f.label);  // long labels are questions ("Have you added your full legal name…?")
   const files = all.filter(f => f.kind === 'file');
   res.cvSlot = files.some(f => /cv|resume|résumé|curriculum/i.test(f.label)) || files.length === 1;
   res.cvAttached = files.some(f => f.filled) || (res.frames || []).some(f => f.cvShown);
