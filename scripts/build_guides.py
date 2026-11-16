@@ -8,8 +8,8 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent.parent / 'site'
 BASE = 'https://snapply.co.uk'
-UPDATED = '5 November 2026'
-DATE_ISO = '2026-11-05'
+UPDATED = '16 November 2026'
+DATE_ISO = '2026-11-16'
 
 GUIDES = [
     ('nhs-supporting-statement', 'How to write an NHS supporting statement',
@@ -511,6 +511,53 @@ GUIDES = [
 <p>Keep a list of each application: employer, role, date, login email, closing date and status. It makes follow-ups and interview preparation much easier.</p>
 <h2>5. Automate the repetitive part</h2>
 <p>Tools such as Snapply fill the repeated fields — personal details, work history, saved answers and your CV upload — from your own CV, so you spend your time on the questions that need real thought. Always review the form before you submit.</p>
+"""),
+    ('how-to-fill-in-a-job-application-form', 'How to fill in a job application form (UK)',
+     'A section-by-section walk through a typical UK job application form: personal details, employment history, education, questions, references and declarations.',
+     """
+<p>Many UK employers ask for an application form instead of, or as well as, a CV. The sections are similar on most forms, whether it is NHS Jobs, TRAC, the Civil Service, a council or a company using Workday. Shortlisters compare candidates on the form, so a complete and accurate one matters.</p>
+<h2>Before you start</h2>
+<ul>
+<li>Read the advert, job description and person specification, and note the closing date.</li>
+<li>Have your CV, dates of each job, qualifications with grades and dates, and two referees’ details to hand.</li>
+<li>Write long answers in a document first and paste them in, so a timeout does not lose your work.</li>
+</ul>
+<h2>1. Personal details</h2>
+<p>Name, contact details and address. Use an email address you check often and a phone number you will answer. Check spelling — recruiters will use these to invite you to interview.</p>
+<h2>2. Employment history</h2>
+<p>List jobs most recent first, with employer, job title, start and end dates (usually month and year) and a short summary of duties. Many forms ask for the reason for leaving (see <a href="reason-for-leaving">how to answer reason for leaving</a>) and want gaps explained (see <a href="employment-gaps">explaining gaps</a>). Make the dates match your CV exactly.</p>
+<h2>3. Education and qualifications</h2>
+<p>Add each qualification with the subject, grade, place of study and date. Include professional registrations and memberships where the role asks for them.</p>
+<h2>4. Supporting information or questions</h2>
+<p>This is the part shortlisters read most closely. Answer against the person specification, one example per criterion (see the <a href="nhs-supporting-statement">supporting statement guide</a> and the <a href="star-method-competency-questions">STAR method</a>). Keep within the word limit.</p>
+<h2>5. Eligibility, references and declarations</h2>
+<ul>
+<li>Right to work: answer honestly; you will usually be asked for evidence later (<a href="right-to-work-questions">right to work questions</a>).</li>
+<li>References: usually your current or most recent employer (<a href="job-references-uk">references guide</a>).</li>
+<li>Equality monitoring is normally optional and kept separate from shortlisting (<a href="equality-monitoring-forms">equality forms</a>).</li>
+<li>Declarations are legal statements — read them yourself before ticking.</li>
+</ul>
+<h2>Final check</h2>
+<p>Read every page before you press submit: dates, job titles, attachments and spelling. Tools such as Snapply can fill the repeated sections (personal details, every job and qualification, your CV upload) from your CV, but you should always check the result and submit it yourself.</p>
+"""),
+    ('healthcare-assistant-application', 'Healthcare assistant (HCA) application tips',
+     'How to apply for healthcare assistant and care support worker jobs on NHS Jobs and TRAC: what shortlisters look for and how to show it without direct experience.',
+     """
+<p>Healthcare assistant (HCA) and healthcare support worker posts are often advertised on NHS Jobs or TRAC, usually at Band 2 or Band 3. Many attract a large number of applications, so a clear, specific application helps you stand out.</p>
+<h2>1. Read the person specification</h2>
+<p>Typical essential criteria include good communication, kindness and respect for patients, teamwork, basic literacy and numeracy, and a willingness to complete training such as the Care Certificate. Check which criteria are assessed on the application form and answer those first.</p>
+<h2>2. Show care values with real examples</h2>
+<p>You do not always need paid care experience. Examples from retail, hospitality, volunteering or caring for a relative can show the same values: patience with a distressed customer, keeping someone’s dignity, following procedures, working shifts in a team. Use a short STAR structure for each (<a href="star-method-competency-questions">STAR method</a>).</p>
+<h2>3. Mention relevant training and checks</h2>
+<ul>
+<li>Care Certificate, first aid, manual handling or basic life support if you have them.</li>
+<li>Any previous enhanced DBS check (the employer will normally request a new one).</li>
+<li>Flexibility for shifts, nights and weekends if the advert asks for it — only if it is true.</li>
+</ul>
+<h2>4. Get the employment history right</h2>
+<p>NHS forms ask for every job with dates and reasons for leaving, and they check gaps. Make dates match your CV and explain gaps briefly (<a href="employment-gaps">explaining gaps</a>).</p>
+<h2>5. Apply to several trusts, tailored</h2>
+<p>Posts close early when they get many applications, so apply promptly. Tailor the supporting information to each trust’s values and person specification rather than pasting the same text. Repeated sections like employment history and education are the same every time — Snapply can fill those on NHS Jobs and TRAC from your CV so you can spend your time on the supporting statement. Check each section and submit it yourself.</p>
 """),
 ]
 
