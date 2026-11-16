@@ -84,7 +84,7 @@ async function frameEvals(cdp, sessionId, expression, seen) {
 const FRAME_STATS = `(()=>{
   const vis=e=>{const r=e.getBoundingClientRect();const s=getComputedStyle(e);return (r.width>0&&r.height>0&&s.visibility!=='hidden')||e.type==='file'};
   const lab=e=>String(e.labels?.[0]?.innerText||e.getAttribute('aria-label')||e.placeholder||e.closest('label')?.innerText||e.name||e.id||'').replace(/\\s+/g,' ').trim().slice(0,70);
-  const els=[...document.querySelectorAll('input,select,textarea')].filter(e=>!/^(hidden|submit|button|image|reset)$/.test(e.type)&&!e.disabled&&vis(e)&&!e.matches('.select2-focusser,.select2-input'));
+  const els=[...document.querySelectorAll('input,select,textarea')].filter(e=>!/^(hidden|submit|button|image|reset)$/.test(e.type)&&!e.disabled&&vis(e)&&!e.matches('.select2-focusser,.select2-input')&&!(e.type!=='file'&&e.getAttribute('aria-hidden')==='true'&&e.tabIndex<0));  // hidden helper boxes behind a widget (Workable's city/postcode behind Address)
   const seen=new Set(),fields=[];
   for(const e of els){
     if(e.type==='radio'){if(seen.has(e.name))continue;seen.add(e.name);const g=[...document.querySelectorAll('input[type=radio][name="'+CSS.escape(e.name)+'"]')];

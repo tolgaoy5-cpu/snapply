@@ -21,7 +21,7 @@ COMPANIES = {
     'ashby': ['synthesia', 'elevenlabs', 'cleo', 'lindus-health', 'tractable', 'ravelin', 'stenn', 'cledara', 'hiro',
               'juro', 'paddle', 'causaly', 'wayve', 'gravitee', 'nory', 'flock'],
     'workable': ['starling-bank', 'pockit', 'lendable', 'zego', 'birdie', 'feedr', 'spektrix', 'carwow', 'thriva',
-                 'housekeep', 'perkbox', 'patchwork-health', 'onecare', 'gousto', 'huel', 'bud'],
+                 'housekeep', 'perkbox', 'patchwork-health', 'onecare', 'gousto', 'huel', 'bud', 'seedlegals', 'kroo', 'yapily', 'kitt'],
     'recruitee': ['pockit', 'tembo', 'nested', 'yoti', 'pushdoctor', 'cognism', 'sennder', 'fintern'],
     'personio': ['moneybox', 'paymentsense', 'bloom', 'thriva', 'cleo', 'kaluza', 'packfleet'],
 }
@@ -87,7 +87,8 @@ def main():
         found = []
         for c in companies:
             try:
-                found += [(ats, c, u) for u in list(globals()[ats](c))[:3]]   # at most 3 per company
+                urls = list(dict.fromkeys(globals()[ats](c)))   # one job listed in several cities comes back several times
+                found += [(ats, c, u) for u in urls[:2]]   # at most 2 per company, so one employer's form does not stand for the whole site
             except Exception:
                 continue
         random.shuffle(found)

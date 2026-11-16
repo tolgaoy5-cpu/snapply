@@ -11,5 +11,9 @@ assert.strictEqual(currentJobValue('employer','Most recent employer',{experience
 assert.strictEqual(currentJobValue('employer','Employer',p),undefined);
 assert.strictEqual(currentJobValue('employer','Previous employer',p),undefined);
 assert.strictEqual(currentJobValue('email','Current email',p),undefined);
+assert.strictEqual(currentJobValue('headline','Headline (Optional)',p),'Operations Manager at Acme Lettings');
+assert.strictEqual(currentJobValue('headline','Headline',{experience:[]}),undefined);
+const rules=src.match(/const FIELD_RULES=\[[\s\S]*?\n\];/)[0];
+assert.ok(/key:'headline',re:\/\^headline/.test(rules),'Workable "Headline" is recognised');
 assert.ok(/simple\[key\]\?\?currentJobValue\(key,label,profile\)/.test(src)&&/simple\[f\.canonical\]\?\?currentJobValue/.test(src),'used by both the plan and the fill');
 console.log('current job fields regression passed');
