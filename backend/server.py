@@ -33,7 +33,7 @@ app.add_middleware(CORSMiddleware,allow_origins=[],allow_origin_regex=ALLOWED_OR
                    allow_credentials=False,allow_methods=['POST','GET','DELETE'],allow_headers=['Content-Type','Authorization'])
 
 # Routes that work without a session in cloud mode.
-PUBLIC_PATHS={'/health','/v1/auth/google','/v1/auth/guest','/v1/billing/webhook','/v1/waitlist','/v1/events','/v1/unsubscribe'}
+PUBLIC_PATHS={'/health','/v1/auth/google','/v1/auth/guest','/v1/billing/webhook','/v1/waitlist','/v1/events','/v1/unsubscribe','/v1/billing/resume'}
 
 @app.middleware('http')
 async def reject_foreign_origins(request:Request,call_next):
@@ -487,9 +487,27 @@ def billing_checkout(r:CheckoutRequest=CheckoutRequest()):
     try:
         url=billing.checkout_url(uid,r.interval)
         analytics.record('checkout_started',r.interval)
+        accounts.note_checkout_started(uid,r.interval)
         return {'ok':True,'url':url}
     except billing.BillingError as e:
         raise HTTPException(status_code=503,detail=str(e))
+
+@app.get('/v1/billing/resume')
+def billing_resume(u:str='',t:str=''):
+    # The link in the one "finish your upgrade" email: opens a fresh Stripe payment page for the same plan.
+    from fastapi.responses import HTMLResponse, RedirectResponse
+    import hmac as _hmac
+    account=accounts.load_account(u) if u and len(u)<=64 and u.isalnum() else {}
+    if not account or not _hmac.compare_digest(t or '',accounts.resume_token(u)):
+        return HTMLResponse('<!doctype html><meta charset="utf-8"><title>Snapply</title><body style="font-family:system-ui;max-width:520px;margin:15vh auto;padding:0 20px;text-align:center"><h1>Snapply</h1><p>This link is not valid. Open Snapply in Chrome and press Get Pro, or email hello@snapply.co.uk.</p></body>',status_code=400)
+    if accounts.plan_of(account)=='pro':
+        return RedirectResponse(billing._return_url()+'/thanks',status_code=303)
+    try:
+        url=billing.checkout_url(u,account.get('checkout_interval') or 'month')
+    except billing.BillingError:
+        return RedirectResponse(billing._return_url()+'/#pricing',status_code=303)
+    analytics.record('checkout_resumed')
+    return RedirectResponse(url,status_code=303)
 
 @app.post('/v1/billing/portal')
 def billing_portal():

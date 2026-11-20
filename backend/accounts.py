@@ -393,7 +393,26 @@ def unsubscribe(uid: str, token: str) -> bool:
     if not uid or not hmac.compare_digest(token or "", unsubscribe_token(uid)) or not load_account(uid):
         return False
     set_marketing(uid, False, "unsubscribe link")
+    with _LOCK:
+        account = load_account(uid)
+        account["no_sales_email"] = True   # also stops the one "finish your upgrade" reminder
+        save_account(uid, account)
     return True
+
+
+def resume_token(uid: str) -> str:
+    """Signs the "finish your upgrade" link in the checkout reminder email (it only opens a new Stripe page)."""
+    return _b64(hmac.new(_secret(), f"resume-checkout:{uid}".encode(), hashlib.sha256).digest())[:32]
+
+
+def note_checkout_started(uid: str, interval: str) -> None:
+    with _LOCK:
+        account = load_account(uid)
+        if not account or account.get("guest"):
+            return
+        account["checkout_started_at"] = datetime.now(timezone.utc).isoformat()
+        account["checkout_interval"] = interval
+        save_account(uid, account)
 
 
 def public_account(uid: str) -> dict[str, Any]:

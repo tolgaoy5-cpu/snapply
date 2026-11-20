@@ -1,6 +1,7 @@
 """Service emails from hello@snapply.co.uk through Gmail SMTP (SMTP_PASSWORD is a Google app password, a Fly secret).
-The only automatic email is the setup reminder: people who signed up but have no CV after REMINDER_DELAY_MINUTES get
-one short "upload your CV to start" email. Nothing is sent when SMTP is not configured."""
+Two automatic emails, each sent at most once per account: the setup reminder (signed up, no CV after
+REMINDER_DELAY_MINUTES: "upload your CV to start") and the checkout reminder (opened the Stripe payment page, did not
+pay, 24 hours later: one "finish your upgrade" email with a link back and an opt-out; PECR soft opt-in). Nothing is sent when SMTP is not configured."""
 from __future__ import annotations
 
 import html
@@ -90,6 +91,55 @@ def due_for_reminder(uid: str, account: dict, now: datetime) -> bool:
     return created >= REMINDERS_FROM and now - created >= delay and not (accounts.user_dir(uid) / 'saved_cv.bin').exists()
 
 
+def checkout_reminder(uid: str, account: dict) -> tuple[str, str, str]:
+    import billing
+    first = (account.get('name') or '').split(' ')[0].strip()
+    plan = next((p for p in billing.PLANS if p['interval'] == account.get('checkout_interval')), None)
+    what = f"Snapply Pro ({plan['label']}, £{plan['price']:.2f})" if plan else 'Snapply Pro'
+    api = os.environ.get('SNAPPLY_API_URL', 'https://snapply-api.fly.dev').rstrip('/')
+    resume = f"{api}/v1/billing/resume?u={uid}&t={accounts.resume_token(uid)}"
+    stop = f"{api}/v1/unsubscribe?u={uid}&t={accounts.unsubscribe_token(uid)}"
+    subject = 'Your Snapply Pro upgrade is waiting'
+    hi = f'Hi {html.escape(first)},' if first else 'Hi,'
+    body = f"""<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#202124;max-width:560px">
+<div><a href="https://snapply.co.uk"><img src="https://snapply.co.uk/logo.png" width="48" height="48" alt="Snapply" style="border-radius:12px;vertical-align:middle"></a>&nbsp;&nbsp;<b style="font-size:20px;vertical-align:middle">Snapply</b></div>
+<p>{hi}</p>
+<p>You started upgrading to <b>{html.escape(what)}</b> but didn’t finish. If you still want unlimited applications and cover letters, you can pick up where you left off:</p>
+<p><a href="{resume}" style="display:inline-block;background:#202124;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:bold">Finish upgrading</a></p>
+<p>If something went wrong on the payment page, or you have a question, <b>just reply to this email</b>. I read every reply.</p>
+<p>Thanks,<br>Tolga<br>Snapply · <a href="https://snapply.co.uk">snapply.co.uk</a></p>
+<p style="font-size:11px;color:#9aa0a6">This is the only reminder we’ll send about it. <a href="{stop}" style="color:#9aa0a6">Don’t email me about offers</a>.</p>
+</div>"""
+    text = f"""{f'Hi {first},' if first else 'Hi,'}
+
+You started upgrading to {what} but didn't finish. If you still want unlimited applications and cover letters, you can pick up where you left off:
+
+{resume}
+
+If something went wrong on the payment page, or you have a question, just reply to this email. I read every reply.
+
+Thanks,
+Tolga
+Snapply - https://snapply.co.uk
+
+This is the only reminder we'll send about it. Don't email me about offers: {stop}"""
+    return subject, body, text
+
+
+def due_for_checkout_reminder(uid: str, account: dict, now: datetime) -> bool:
+    """One reminder, 24 hours to 7 days after someone opened the payment page and did not become Pro."""
+    if (account.get('checkout_reminder_sent') or account.get('no_sales_email') or account.get('no_service_email')
+            or account.get('guest') or not account.get('email') or accounts.plan_of(account) == 'pro'):
+        return False
+    if (account.get('marketing') or {}).get('opt_in') is False and (account.get('marketing') or {}).get('source') == 'unsubscribe link':
+        return False
+    try:
+        started = datetime.fromisoformat(account.get('checkout_started_at', ''))
+    except ValueError:
+        return False
+    return timedelta(hours=24) <= now - started <= timedelta(days=7)
+
+
 def sweep(now: datetime | None = None) -> int:
     """Send any setup reminders that are due; returns how many were sent."""
     try:
@@ -106,6 +156,24 @@ def sweep(now: datetime | None = None) -> int:
         try:
             account = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
+            continue
+        if due_for_checkout_reminder(uid, account, now):
+            subject, body, text = checkout_reminder(uid, account)
+            try:
+                ok = send(account['email'], subject, body, text)
+            except Exception as e:
+                print(f'checkout reminder failed: {type(e).__name__}')
+                ok = False
+            if ok:
+                current = accounts.load_account(uid)
+                current['checkout_reminder_sent'] = now.isoformat()
+                accounts.save_account(uid, current)
+                try:
+                    import analytics
+                    analytics.record('checkout_reminder_sent')
+                except Exception:
+                    pass
+                sent += 1
             continue
         if not due_for_reminder(uid, account, now):
             continue
